@@ -1,0 +1,33 @@
+version: "3"
+
+vars:
+  BIN_DIR: "bin"
+  LINT_VERSION: 2.1.6
+
+tasks:
+  update:
+    desc: Updates all dependencies
+    aliases: [up]
+    silent: true
+    cmds:
+      - go mod tidy
+
+  lint:
+    desc: Run golangci-lint on the codebase
+    deps: [install:golangci-lint]
+    silent: true
+    cmd: "{{.BIN_DIR}}/golangci-lint run {{.CLI_ARGS}}"
+
+  test:
+    desc: Run the test suite
+    silent: true
+    cmd: go test ./... -cover
+
+  install:golangci-lint:
+    silent: true
+    status:
+      - test -f {{.BIN_DIR}}/golangci-lint
+      - "{{.BIN_DIR}}/golangci-lint --version | grep 'version {{.LINT_VERSION}}' >/dev/null"
+    vars:
+      URL: https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
+    cmd: curl -sSfL {{.URL}} | sh -s -- -b {{.BIN_DIR}} v{{.LINT_VERSION}}
