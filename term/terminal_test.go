@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/mattn/go-isatty"
-	"github.com/pseudomuto/gooey/term"
+	. "github.com/pseudomuto/gooey/term"
 	"github.com/stretchr/testify/require"
 )
 
 const defaultTerminalWidth = 120
 
 func TestWidth(t *testing.T) {
-	width := term.Width()
+	width := Width()
 
 	// In a CI environment, this will likely not be a TTY
 	if isatty.IsTerminal(os.Stdin.Fd()) {
@@ -77,7 +77,67 @@ func TestPrintableWidth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, term.PrintableWidth(tt.input))
+			require.Equal(t, tt.expected, PrintableWidth(tt.input))
+		})
+	}
+}
+
+func TestStripCodes(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple string",
+			input:    "hello",
+			expected: "hello",
+		},
+		{
+			name:     "string with color codes",
+			input:    "\033[31mhello\033[0m",
+			expected: "hello",
+		},
+		{
+			name:     "string with unicode",
+			input:    "✓ hello",
+			expected: "✓ hello",
+		},
+		{
+			name:     "string with color and unicode",
+			input:    "\033[32m✓ success\033[0m",
+			expected: "✓ success",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "string with only ansi codes",
+			input:    "\033[31m\033[1m\033[0m",
+			expected: "",
+		},
+		{
+			name:     "string with emoji",
+			input:    "hello 👋",
+			expected: "hello 👋",
+		},
+		{
+			name:     "string with wide characters",
+			input:    "\u4f60\u597d", // "你好"
+			expected: "\u4f60\u597d",
+		},
+		{
+			name:     "string with ZWJ emoji",
+			input:    "👩‍👩‍👧‍👦",
+			expected: "👩‍👩‍👧‍👦",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, StripCodes(tt.input))
 		})
 	}
 }
@@ -201,12 +261,12 @@ func TestTruncateString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := term.TruncateString(tt.input, tt.maxWidth)
+			result := TruncateString(tt.input, tt.maxWidth)
 			require.Equal(t, tt.expected, result)
 
 			// Verify the result doesn't exceed the max width (only for positive widths)
 			if tt.maxWidth > 0 {
-				actualWidth := term.PrintableWidth(result)
+				actualWidth := PrintableWidth(result)
 				require.LessOrEqual(t, actualWidth, tt.maxWidth, "truncated string exceeds max width")
 			}
 		})

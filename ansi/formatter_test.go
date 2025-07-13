@@ -250,7 +250,7 @@ func TestFormatterIconsWithColors(t *testing.T) {
 	require.Contains(t, result, "✓", "Should contain check icon")
 	require.Contains(t, result, "\033[32m", "Should contain green color code")
 	require.Contains(t, result, "Success", "Should contain success text")
-	require.Contains(t, result, "✗", "Should contain error icon") 
+	require.Contains(t, result, "✗", "Should contain error icon")
 	require.Contains(t, result, "\033[31m", "Should contain red color code")
 	require.Contains(t, result, "Failed", "Should contain failed text")
 }

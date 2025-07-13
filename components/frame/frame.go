@@ -28,7 +28,7 @@ var (
 	defaultFrameStyle            = Box
 	defaultFrameOutput io.Writer = os.Stdout
 
-	frameStack         = new(FrameStack)
+	stack              = new(frameStack)
 	frameColorOverride *ansi.Color
 	frameColorMutex    sync.RWMutex
 )
@@ -99,7 +99,7 @@ func Open(title string, options ...FrameOption) *Frame {
 	}
 	frameColorMutex.RUnlock()
 
-	frameStack.Push(frame)
+	stack.push(frame)
 
 	fmt.Fprint(frame.output, frame.renderer.openFrame(frame.title, frame.color))
 	return frame
@@ -118,7 +118,7 @@ func Open(title string, options ...FrameOption) *Frame {
 //	frame.Println("Work completed")
 //	// When Close() is called, it will show: └─────────── (100ms) ┘
 func (f *Frame) Close() {
-	if frameStack.Current() != f {
+	if stack.current() != f {
 		return
 	}
 
@@ -131,7 +131,7 @@ func (f *Frame) Close() {
 	frameColorMutex.RUnlock()
 
 	closeOutput := f.renderer.closeFrame(elapsed, color)
-	frameStack.Pop()
+	stack.pop()
 	fmt.Fprint(f.output, closeOutput)
 }
 
@@ -193,7 +193,7 @@ func (f *Frame) formatContentLine(content string) string {
 	frameColorMutex.RUnlock()
 
 	// Get this frame's depth in the stack
-	frameDepth := frameStack.FrameDepth(f)
+	frameDepth := stack.frameDepth(f)
 
 	return f.renderer.formatContentLineWithDepth(content, color, frameDepth)
 }
@@ -249,13 +249,17 @@ func (f *Frame) Divider(heading string) {
 	fmt.Fprint(f.output, f.renderer.createDivider(heading, color))
 }
 
-func prefix() string {
-	return frameStack.Prefix()
-}
+// ReplaceLine replaces the last line written to the frame with new content
+// This allows components like progress bars to update in place while maintaining frame formatting
+func (f *Frame) ReplaceLine(format string, a ...any) {
+	content := fmt.Sprintf(format, a...)
 
-// contentPrefix returns the prefix that should be used for content inside the current frame
-func contentPrefix() string {
-	return frameStack.ContentPrefix()
+	// Format the content with proper frame styling
+	formattedLine := f.formatContentLine(content)
+
+	// Write cursor control directly to the underlying output to bypass frame processing
+	// This ensures ANSI sequences are interpreted as control commands, not text
+	fmt.Fprint(f.output, ansi.MoveCursorUp(1)+ansi.ClearLine+formattedLine+"\n")
 }
 
 // WithColor sets the color for the frame's border and content prefixes.
@@ -273,6 +277,7 @@ func WithColor(color ansi.Color) FrameOption {
 }
 
 // WithStyle sets the frame's rendering style.
+//
 // Two styles are available:
 //   - frame.Box: Full box borders with complete enclosure (default)
 //   - frame.Bracket: Simple bracket-style markers without full borders
@@ -287,9 +292,9 @@ func WithColor(color ansi.Color) FrameOption {
 //
 //	// Bracket style (minimal markers)
 //	bracketFrame := frame.Open("Minimal", frame.WithStyle(frame.Bracket))
-//	// Creates: [ Minimal ]
+//	// Creates: ┌── Minimal
 //	//          │  Content goes here
-//	//          [ ]
+//	//          └──
 func WithStyle(style FrameStyle) FrameOption {
 	return func(f *Frame) {
 		width := term.Width()

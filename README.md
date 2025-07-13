@@ -5,6 +5,7 @@ A Go CLI UI library inspired by [Shopify's cli-ui](https://github.com/Shopify/cl
 ## Features
 
 - **Frame Components**: Create bordered content areas with nested frame support
+- **Progress Components**: Interactive progress bars with extensible renderers, adaptive width calculation, real-time updates, and seamless frame integration
 - **ANSI Color Support**: Rich color and styling with template-based formatting
 - **Multiple Frame Styles**: Box and bracket frame styles
 - **Automatic Formatting**: Smart content alignment and border management
@@ -73,6 +74,70 @@ bracketFrame.Println("This uses simple bracket markers")
 bracketFrame.Close()
 ```
 
+### Progress Bars
+
+```go
+package main
+
+import (
+    "fmt"
+    "io"
+    "time"
+    
+    "github.com/pseudomuto/gooey/ansi"
+    "github.com/pseudomuto/gooey/components/progress"
+    "github.com/pseudomuto/gooey/components/frame"
+)
+
+func main() {
+    // Basic progress bar
+    p := progress.New("Downloading files", 100)
+    for i := 0; i <= 100; i += 10 {
+        p.Update(i, fmt.Sprintf("Downloaded %d files", i))
+        time.Sleep(100 * time.Millisecond)
+    }
+    p.Complete("All files downloaded!")
+
+    // Different built-in styles
+    p1 := progress.New("Processing", 50, 
+        progress.WithRenderer(progress.Bar), 
+        progress.WithColor(ansi.Green))
+        
+    p2 := progress.New("Uploading", 25, 
+        progress.WithRenderer(progress.Minimal), 
+        progress.WithColor(ansi.Blue))
+        
+    p3 := progress.New("Installing", 20, 
+        progress.WithRenderer(progress.Dots), 
+        progress.WithColor(ansi.Yellow),
+        progress.WithWidth(30))
+
+    // Custom renderer with function
+    p4 := progress.New("Processing", 10,
+        progress.WithRenderer(progress.RenderFunc(func(p *progress.Progress, w io.Writer) {
+            percentage := p.Percentage()
+            if percentage < 50 {
+                fmt.Fprintf(w, "%s: 🔴 %.1f%%", p.Title(), percentage)
+            } else {
+                fmt.Fprintf(w, "%s: 🟢 %.1f%%", p.Title(), percentage)
+            }
+        })))
+
+    // Progress bars work seamlessly within frames
+    f := frame.Open("Deployment", frame.WithColor(ansi.Cyan))
+    p5 := progress.New("Building", 8, 
+        progress.WithColor(ansi.Green),
+        progress.WithOutput(f))
+    
+    for i := 0; i <= 8; i++ {
+        p5.Update(i, fmt.Sprintf("Step %d", i))
+        time.Sleep(200 * time.Millisecond)
+    }
+    p5.Complete("Build completed!")
+    f.Close()
+}
+```
+
 ### ANSI Template Formatting
 
 ```go
@@ -116,6 +181,35 @@ fmt.Print(ansi.MoveCursor(10, 5))
 fmt.Println("Text at specific position")
 ```
 
+### Flexible Layout System
+
+The `term.SectionLayout` provides a powerful system for creating multi-column layouts with proportional widths:
+
+```go
+import "github.com/pseudomuto/gooey/term"
+
+// Create a 3-column layout with 20%, 60%, 20% proportions
+layout := term.NewSectionLayout(100, 1, 3, 1)
+widths := layout.SectionWidths() // Returns [20, 60, 20]
+
+// With minimum width constraints
+layout = term.NewSectionLayout(100, 1, 3, 1).WithMinWidths(10, 20, 8)
+widths = layout.SectionWidths() // Respects minimums
+
+// 2-column layout
+layout = term.NewSectionLayout(100, 2, 3) // 40:60 split
+
+// 4-column equal layout
+layout = term.NewSectionLayout(100, 1, 1, 1, 1) // 25% each
+
+// Float weights work too
+layout = term.NewSectionLayout(100, 0.5, 1.5, 0.5) // 20:60:20
+
+// Text formatting utilities
+formatted := term.TruncateAndPad("Hello", 10) // "Hello     "
+formatted = term.TruncateAndPad("Hello World", 8) // "Hello..."
+```
+
 ## API Reference
 
 ### Frame Methods
@@ -125,6 +219,7 @@ fmt.Println("Text at specific position")
 - `frame.Print(format string, args ...any)` - Print formatted content without newline
 - `frame.Println(format string, args ...any)` - Print formatted content with newline
 - `frame.Divider(text string)` - Add a divider line with optional text
+- `frame.ReplaceLine(format string, args ...any)` - Replace the last line with new content (enables single-line updates)
 
 ### Frame Options
 
@@ -137,17 +232,94 @@ fmt.Println("Text at specific position")
 - `frame.Box` - Full box borders with complete enclosure
 - `frame.Bracket` - Simple bracket-style markers
 
+### Progress Methods
+
+- `progress.New(title string, total int, options ...ProgressOption) *Progress` - Create and initialize a new progress bar
+- `progress.Update(current int, message string)` - Update progress value and optional message
+- `progress.Increment(message string)` - Increment progress by 1 with optional message
+- `progress.Complete(message string)` - Mark progress as 100% complete with final message
+
+#### Progress Getters
+
+- `progress.Current() int` - Get current progress value
+- `progress.Total() int` - Get total progress value
+- `progress.Percentage() float64` - Get completion percentage
+- `progress.IsCompleted() bool` - Check if progress is completed
+- `progress.Elapsed() time.Duration` - Get elapsed time since creation
+- `progress.Message() string` - Get current progress message
+- `progress.Title() string` - Get progress bar title
+- `progress.Color() ansi.Color` - Get progress bar color
+- `progress.Width() int` - Get progress bar width
+- `progress.AvailableWidth() int` - Get calculated available width for progress bar
+
+### Progress Options
+
+- `progress.WithColor(color ansi.Color)` - Set progress bar color
+- `progress.WithRenderer(renderer ProgressRenderer)` - Set custom renderer for unlimited styling
+- `progress.WithWidth(width int)` - Set progress bar width in characters
+- `progress.WithOutput(w io.Writer)` - Set custom output writer
+
+### Built-in Progress Renderers
+
+- `progress.Bar` - Full progress bar with filled/empty characters (default)
+- `progress.Minimal` - Minimal display with just percentage and message
+- `progress.Dots` - Dot-based progress indicator
+
+### Custom Progress Renderers
+
+```go
+// Implement the ProgressRenderer interface
+type customRenderer struct{}
+
+func (r *customRenderer) Render(p *progress.Progress, w io.Writer) {
+    fmt.Fprintf(w, "Custom: %s %.1f%%", p.Title(), p.Percentage())
+}
+
+// Use with WithRenderer option
+p := progress.New("Task", 100, progress.WithRenderer(&customRenderer{}))
+
+// Or use RenderFunc for inline custom renderers
+p := progress.New("Task", 100, 
+    progress.WithRenderer(progress.RenderFunc(func(p *progress.Progress, w io.Writer) {
+        // Custom rendering logic here
+    })))
+```
+
+### Layout System API
+
+#### SectionLayout
+
+- `term.NewSectionLayout(totalWidth int, weights ...float64) SectionLayout` - Create layout with proportional column weights
+- `layout.WithMinWidths(minWidths ...int) SectionLayout` - Set minimum width constraints per column
+- `layout.SectionWidths() []int` - Calculate actual column widths with smart scaling
+
+#### Text Utilities
+
+- `term.TruncateAndPad(text string, maxWidth int) string` - Truncate text with "..." and pad to exact width
+- `term.PrintableWidth(text string) int` - Get display width excluding ANSI escape sequences
+- `term.TruncateString(text string, maxWidth int) string` - Truncate string while preserving ANSI formatting
+- `term.StripCodes(text string) string` - Remove ANSI escape sequences
+
+#### Mathematical Utilities
+
+- `term.Max(a, b int) int` - Return the larger of two integers
+- `term.Min(a, b int) int` - Return the smaller of two integers
+
 ## Examples
 
-Run the example to see all features in action:
+Run the examples to see all features in action:
 
 ```bash
+# Frame component examples
 cd examples/frame
+go run .
+
+# Progress component examples
+cd examples/progress
 go run .
 ```
 
-This will demonstrate:
-
+The frame examples demonstrate:
 - Basic frame usage
 - Nested frames with color inheritance
 - Different frame styles
@@ -157,21 +329,35 @@ This will demonstrate:
 - Icon usage and status indicators
 - Terminal control sequences
 
+The progress examples demonstrate:
+- Basic progress bar creation and updates
+- Built-in progress renderers (Bar, Minimal, Dots)
+- Custom renderers with ProgressRenderer interface and RenderFunc
+- Custom colors and widths
+- Increment and completion methods
+- Real-time progress updates with messages  
+- Seamless integration with frames using single-line updates
+- Flexible three-section layout using proportional column system
+- Advanced styling with emoji and time-based custom renderers
+
 ## Architecture
 
 ### Core Packages
 
 - **`ansi`** - ANSI color codes, styles, template formatting, icons, and terminal control sequences
-- **`components`** - Reusable UI components (Frame, etc.)
-- **`term`** - Terminal utilities and width detection
+- **`components`** - Reusable UI components (Frame, Progress, etc.)
+- **`term`** - Terminal utilities, width detection, flexible layout system, and mathematical functions
 
 ### Design Principles
 
 - **io.Writer Interface**: All components implement standard Go interfaces
 - **Functional Options**: Flexible configuration using the options pattern
+- **Renderer Pattern**: Extensible styling through interface-based renderers
 - **Template Processing**: Rich text formatting with `{{style+color:text}}` syntax
 - **Responsive Design**: Automatic adaptation to terminal width
 - **Color Inheritance**: Nested components inherit parent colors appropriately
+- **Single-Line Updates**: Progress components update in place within frames for clean real-time feedback
+- **Flexible Layout System**: Multi-column layouts with proportional width allocation and minimum constraints
 
 ## Development
 

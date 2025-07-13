@@ -59,6 +59,19 @@ func PrintableWidth(s string) int {
 	return runewidth.StringWidth(cleanString)
 }
 
+// StripCodes returns the printable characters in a string, excluding ANSI escape sequences.
+// This function correctly handles Unicode characters, emojis, and wide characters.
+//
+// Examples:
+//
+//	StripCodes("hello")                    // Returns: "hello"
+//	StripCodes("\033[31mhello\033[0m")     // Returns: "hello"
+//	StripCodes("你好")                      // Returns: "你好"
+//	StripCodes("hello 👋")                 // Returns: "hello 👋"
+func StripCodes(s string) string {
+	return ansiRegex.ReplaceAllString(s, "")
+}
+
 // TruncateString truncates a string to the specified printable width while preserving ANSI escape sequences.
 // The function correctly handles Unicode characters, emojis, and ANSI color codes.
 // If maxWidth is 0 or negative, it returns an empty string.

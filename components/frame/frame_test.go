@@ -164,32 +164,32 @@ func TestFrameStyleDifferences(t *testing.T) {
 	t.Run("Box Style Has Right Borders", func(t *testing.T) {
 		var buf bytes.Buffer
 		frame := Open("Test", WithStyle(Box), WithOutput(&buf))
-		
+
 		buf.Reset()
 		frame.Println("Content")
-		
+
 		output := buf.String()
 		// Box style should have right border after content
 		require.Contains(t, output, "│", "Box style should have right border")
 		// Should have multiple occurrences of │ (left border + right border)
 		require.GreaterOrEqual(t, strings.Count(output, "│"), 2, "Box style should have left and right borders")
-		
+
 		frame.Close()
 	})
 
 	t.Run("Bracket Style Has No Right Borders", func(t *testing.T) {
 		var buf bytes.Buffer
 		frame := Open("Test", WithStyle(Bracket), WithOutput(&buf))
-		
+
 		buf.Reset()
 		frame.Println("Content")
-		
+
 		output := buf.String()
 		// Bracket style should have left border but no right border
 		require.Contains(t, output, "│", "Bracket style should have left border")
 		// Should have only one occurrence of │ (just left border)
 		require.Equal(t, 1, strings.Count(output, "│"), "Bracket style should only have left border")
-		
+
 		frame.Close()
 	})
 }
@@ -200,10 +200,10 @@ func TestFrameTitleColoring(t *testing.T) {
 	frame.Close()
 
 	output := buf.String()
-	
+
 	// Should contain red color codes for borders
 	require.Contains(t, output, ansi.Red.String(), "Should contain red color for borders")
-	
+
 	// Title text should not be wrapped in color codes
 	// The title "Test Frame" should appear without being wrapped in red codes
 	lines := strings.Split(output, "\n")
@@ -214,9 +214,9 @@ func TestFrameTitleColoring(t *testing.T) {
 			break
 		}
 	}
-	
+
 	require.NotEmpty(t, titleLine, "Should find line containing title")
-	
+
 	// The title itself should appear as plain text (not wrapped in color codes)
 	// This is a bit tricky to test precisely, but we can check that the title
 	// appears outside of color escape sequences

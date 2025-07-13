@@ -272,7 +272,7 @@ func (f *Formatter) initializeStyles() {
 }
 
 // initializeIcons sets up default icon mappings
-func (f *Formatter) initializeIcons() {
+func (f *Formatter) initializeIcons() { // nolint: funlen
 	// Status icons
 	f.icons["check"] = CheckMark
 	f.icons["cross"] = CrossMark

@@ -18,10 +18,6 @@ const (
 	boxVertical    = "│"
 	boxTee         = "├"
 	boxTeeRight    = "┤"
-
-	// Bracket characters
-	bracketLeft  = "["
-	bracketRight = "]"
 )
 
 // frameDimensions holds calculated dimensions for frame rendering
@@ -60,13 +56,13 @@ func calculateFrameDimensions(termWidth int, depth int) frameDimensions {
 // renderParentPrefixes renders the prefixes for parent frames
 func renderParentPrefixes(result *strings.Builder, depth int) {
 	if depth > 1 {
-		parentFrameColors := frameStack.GetFrameColors(depth - 1)
+		parentFrameColors := stack.frameColors(depth - 1)
 		for i := 0; i < depth-1; i++ {
 			var prefixColor ansi.Color
 			if i < len(parentFrameColors) {
 				prefixColor = parentFrameColors[i]
 			} else {
-				prefixColor = ansi.Cyan // fallback
+				prefixColor = defaultFrameColor // fallback
 			}
 			result.WriteString(prefixColor.Sprint(frameVerticalPrefix))
 		}
@@ -75,13 +71,13 @@ func renderParentPrefixes(result *strings.Builder, depth int) {
 
 // renderParentBorders renders the right borders for parent frames
 func renderParentBorders(result *strings.Builder, depth int) {
-	parentFrameColors := frameStack.GetFrameColors(depth - 1)
+	parentFrameColors := stack.frameColors(depth - 1)
 	for i := depth - 2; i >= 0; i-- {
 		var borderColor ansi.Color
 		if i < len(parentFrameColors) {
 			borderColor = parentFrameColors[i]
 		} else {
-			borderColor = ansi.Cyan // fallback
+			borderColor = defaultFrameColor // fallback
 		}
 		result.WriteString(" " + borderColor.Sprint(boxVertical))
 	}
@@ -110,8 +106,7 @@ type (
 
 func (r *boxRenderer) formatContentLine(content string, color ansi.Color) string {
 	// Use the current stack depth for backward compatibility
-	depth := frameStack.Depth()
-	return r.formatContentLineWithDepth(content, color, depth)
+	return r.formatContentLineWithDepth(content, color, stack.depth())
 }
 
 func (r *boxRenderer) formatContentLineWithDepth(content string, color ansi.Color, frameDepth int) string {
@@ -143,6 +138,7 @@ func (r *boxRenderer) formatContentLineWithDepth(content string, color ansi.Colo
 	// Pre-process content to handle ANSI template syntax (e.g., {{bold+cyan:work}})
 	// This ensures width calculations are based on the final rendered content
 	processedContent := content
+
 	if strings.Contains(content, "{{") && strings.Contains(content, "}}") {
 		// Use QuickFormat to process template syntax and get the actual ANSI result
 		processedContent = ansi.Format(content)
@@ -161,7 +157,7 @@ func (r *boxRenderer) formatContentLineWithDepth(content string, color ansi.Colo
 	paddedContent := processedContent + strings.Repeat(" ", padding)
 
 	// Get the colors of all frames in the stack up to current depth
-	frameColors := frameStack.GetFrameColors(depth)
+	frameColors := stack.frameColors(depth)
 
 	// Build the full line
 	var result strings.Builder
@@ -192,7 +188,7 @@ func (r *boxRenderer) formatContentLineWithDepth(content string, color ansi.Colo
 	// Add right borders for current frame and all parent frames
 	// Each frame's content should show ALL right borders from innermost to outermost
 	// We only need colors up to this frame's depth
-	allFrameColors := frameStack.GetFrameColors(depth)
+	allFrameColors := stack.frameColors(depth)
 
 	// Show current frame border first
 	if depth > 0 {
@@ -221,7 +217,7 @@ func (r *boxRenderer) formatContentLineWithDepth(content string, color ansi.Colo
 }
 
 func (r *boxRenderer) openFrame(title string, color ansi.Color) string {
-	depth := frameStack.Depth()
+	depth := stack.depth()
 	dims := calculateFrameDimensions(r.termWidth, depth)
 
 	// Pre-process title to handle ANSI template syntax (e.g., {{unicorn:}})
@@ -267,7 +263,7 @@ func (r *boxRenderer) openFrame(title string, color ansi.Color) string {
 }
 
 func (r *boxRenderer) closeFrame(elapsed time.Duration, color ansi.Color) string {
-	depth := frameStack.Depth()
+	depth := stack.depth()
 	dims := calculateFrameDimensions(r.termWidth, depth)
 
 	// Create bottom border with timing
@@ -295,7 +291,7 @@ func (r *boxRenderer) closeFrame(elapsed time.Duration, color ansi.Color) string
 }
 
 func (r *boxRenderer) createDivider(text string, color ansi.Color) string {
-	depth := frameStack.Depth()
+	depth := stack.depth()
 	dims := calculateFrameDimensions(r.termWidth, depth)
 
 	// Create divider text with spaces but without color applied yet
@@ -339,8 +335,7 @@ func (r *boxRenderer) createDivider(text string, color ansi.Color) string {
 
 func (r *bracketRenderer) formatContentLine(content string, color ansi.Color) string {
 	// Use the current stack depth for backward compatibility
-	depth := frameStack.Depth()
-	return r.formatContentLineWithDepth(content, color, depth)
+	return r.formatContentLineWithDepth(content, color, stack.depth())
 }
 
 func (r *bracketRenderer) formatContentLineWithDepth(content string, color ansi.Color, frameDepth int) string {
@@ -356,7 +351,7 @@ func (r *bracketRenderer) formatContentLineWithDepth(content string, color ansi.
 	}
 
 	// Get the colors of all frames in the stack up to current depth
-	frameColors := frameStack.GetFrameColors(depth)
+	frameColors := stack.frameColors(depth)
 
 	// Build the full line
 	var result strings.Builder
@@ -388,7 +383,7 @@ func (r *bracketRenderer) formatContentLineWithDepth(content string, color ansi.
 }
 
 func (r *bracketRenderer) openFrame(title string, color ansi.Color) string {
-	depth := frameStack.Depth()
+	depth := stack.depth()
 	dims := calculateFrameDimensions(r.termWidth, depth)
 
 	// Pre-process title to handle ANSI template syntax (e.g., {{unicorn:}})
@@ -420,7 +415,7 @@ func (r *bracketRenderer) openFrame(title string, color ansi.Color) string {
 	// Add current frame's top border with title in default color and borders in frame color
 	// For bracket style, we only add the left border without horizontal fill or right border
 	leftBorder := color.Sprint(boxTopLeft + strings.Repeat(boxHorizontal, 2))
-	
+
 	result.WriteString(leftBorder)
 	result.WriteString(titleWithSpaces) // Title in default color
 
@@ -429,7 +424,7 @@ func (r *bracketRenderer) openFrame(title string, color ansi.Color) string {
 }
 
 func (r *bracketRenderer) closeFrame(elapsed time.Duration, color ansi.Color) string {
-	depth := frameStack.Depth()
+	depth := stack.depth()
 
 	// Create bottom border with timing
 	var timingText string
@@ -453,8 +448,6 @@ func (r *bracketRenderer) closeFrame(elapsed time.Duration, color ansi.Color) st
 }
 
 func (r *bracketRenderer) createDivider(text string, color ansi.Color) string {
-	depth := frameStack.Depth()
-
 	// Create divider text with spaces but without color applied yet
 	var textWithSpaces string
 	if text != "" {
@@ -465,11 +458,11 @@ func (r *bracketRenderer) createDivider(text string, color ansi.Color) string {
 	var result strings.Builder
 
 	// Add parent frame prefixes with their original colors
-	renderParentPrefixes(&result, depth)
+	renderParentPrefixes(&result, stack.depth())
 
 	// Add current frame's divider without horizontal fill or right border
 	leftBorder := color.Sprint(boxTee + strings.Repeat(boxHorizontal, 2))
-	
+
 	result.WriteString(leftBorder)
 	result.WriteString(textWithSpaces) // Text in default color
 
