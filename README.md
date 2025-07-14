@@ -6,6 +6,7 @@ A Go CLI UI library inspired by [Shopify's cli-ui](https://github.com/Shopify/cl
 
 - **Frame Components**: Create bordered content areas with nested frame support
 - **Progress Components**: Interactive progress bars with extensible renderers, adaptive width calculation, real-time updates, and seamless frame integration
+- **Spinner Components**: Animated loading indicators with automatic color rotation (Red→Blue→Cyan→Magenta), multiple animation styles, and real-time message updates
 - **ANSI Color Support**: Rich color and styling with template-based formatting
 - **Multiple Frame Styles**: Box and bracket frame styles
 - **Automatic Formatting**: Smart content alignment and border management
@@ -134,6 +135,78 @@ func main() {
         time.Sleep(200 * time.Millisecond)
     }
     p5.Complete("Build completed!")
+    f.Close()
+}
+```
+
+### Spinner Animations
+
+```go
+package main
+
+import (
+    "fmt"
+    "io"
+    "time"
+    
+    "github.com/pseudomuto/gooey/ansi"
+    "github.com/pseudomuto/gooey/components/frame"
+    "github.com/pseudomuto/gooey/components/spinner"
+)
+
+func main() {
+    // Basic spinner with automatic color rotation (Red→Blue→Cyan→Magenta)
+    s := spinner.New("Loading data...")
+    s.Start()
+    time.Sleep(3 * time.Second)
+    s.Stop()
+
+    // Custom spinner with fixed color and no elapsed time display
+    s2 := spinner.New("Processing files...",
+        spinner.WithColor(ansi.Green),
+        spinner.WithRenderer(spinner.Clock),
+        spinner.WithInterval(200*time.Millisecond),
+        spinner.WithShowElapsed(false)) // Disable elapsed time display
+    
+    s2.Start()
+    time.Sleep(2 * time.Second)
+    
+    s2.UpdateMessage("Almost done...")
+    time.Sleep(1 * time.Second)
+    
+    s2.Stop()
+
+    // Different built-in animation styles
+    s3 := spinner.New("Dots animation", 
+        spinner.WithRenderer(spinner.Dots))    // 8-frame braille spinner
+        
+    s4 := spinner.New("Clock animation", 
+        spinner.WithRenderer(spinner.Clock))   // 4-frame subset
+        
+    s5 := spinner.New("Arrow animation", 
+        spinner.WithRenderer(spinner.Arrow))   // Directional arrows
+
+    // Custom renderer with function
+    s6 := spinner.New("Custom animation",
+        spinner.WithRenderer(spinner.RenderFunc(func(s *spinner.Spinner, frame int, w io.Writer) {
+            icons := []string{"◐", "◓", "◑", "◒"}
+            color := s.CurrentColor(frame) // Access automatic color rotation
+            icon := icons[frame%len(icons)]
+            fmt.Fprintf(w, "%s %s", ansi.Icon(icon).Colorize(color), s.Message())
+        })))
+
+    // Spinners work seamlessly within frames
+    f := frame.Open("Deployment", frame.WithColor(ansi.Cyan))
+    s7 := spinner.New("Building application...", 
+        spinner.WithOutput(f))
+    
+    s7.Start()
+    time.Sleep(2 * time.Second)
+    s7.UpdateMessage("Finalizing...")
+    time.Sleep(1 * time.Second)
+    s7.Stop()
+    
+    f.Println("Build completed!")
     f.Close()
 }
 ```
@@ -285,6 +358,55 @@ p := progress.New("Task", 100,
     })))
 ```
 
+### Spinner Methods
+
+- `spinner.New(message string, options ...SpinnerOption) *Spinner` - Create and initialize a new animated spinner
+- `spinner.Start()` - Start the spinner animation in a background goroutine
+- `spinner.Stop()` - Stop the spinner animation and show completion with elapsed time
+- `spinner.UpdateMessage(message string)` - Update the spinner message while running
+- `spinner.IsRunning() bool` - Check if the spinner is currently animating
+- `spinner.Message() string` - Get the current spinner message
+- `spinner.Color() ansi.Color` - Get the spinner's configured color
+- `spinner.CurrentColor(frame int) ansi.Color` - Get the color for a specific animation frame (handles rotation)
+- `spinner.Elapsed() time.Duration` - Get elapsed time since spinner started
+- `spinner.ShowElapsed() bool` - Check if elapsed time will be shown on completion
+
+### Spinner Options
+
+- `spinner.WithColor(color ansi.Color)` - Set fixed color (overrides automatic rotation)
+- `spinner.WithRenderer(renderer SpinnerRenderer)` - Set custom animation renderer
+- `spinner.WithInterval(interval time.Duration)` - Set animation frame interval (default: 100ms)
+- `spinner.WithOutput(w io.Writer)` - Set custom output writer
+- `spinner.WithShowElapsed(show bool)` - Control whether elapsed time is displayed on completion (default: true)
+
+### Built-in Spinner Renderers
+
+- `spinner.Dots` - 8-frame braille spinner animation (⠋⠙⠹⠸⠼⠴⠦⠧)
+- `spinner.Clock` - 4-frame subset for slower animation
+- `spinner.Arrow` - Directional arrows rotating (→↓←↑)
+
+### Custom Spinner Renderers
+
+```go
+// Implement the SpinnerRenderer interface
+type customRenderer struct{}
+
+func (r *customRenderer) Render(s *spinner.Spinner, frame int, w io.Writer) {
+    color := s.CurrentColor(frame) // Access automatic color rotation
+    fmt.Fprintf(w, "Custom: %s %s", color.Colorize("●"), s.Message())
+}
+
+// Use with WithRenderer option
+s := spinner.New("Task", spinner.WithRenderer(&customRenderer{}))
+
+// Or use RenderFunc for inline custom renderers
+s := spinner.New("Task", 
+    spinner.WithRenderer(spinner.RenderFunc(func(s *spinner.Spinner, frame int, w io.Writer) {
+        // Custom rendering logic here
+        // s.CurrentColor(frame) provides automatic color rotation
+    })))
+```
+
 ### Layout System API
 
 #### SectionLayout
@@ -317,6 +439,10 @@ go run .
 # Progress component examples
 cd examples/progress
 go run .
+
+# Spinner component examples
+cd examples/spinner
+go run .
 ```
 
 The frame examples demonstrate:
@@ -340,12 +466,22 @@ The progress examples demonstrate:
 - Flexible three-section layout using proportional column system
 - Advanced styling with emoji and time-based custom renderers
 
+The spinner examples demonstrate:
+- Basic spinner animations with automatic color rotation (Red→Blue→Cyan→Magenta)
+- Built-in spinner renderers (Dots, Clock, Arrow)
+- Custom renderers with SpinnerRenderer interface and RenderFunc
+- Fixed color override with WithColor option
+- Real-time message updates while spinning
+- Seamless integration with frames using single-line updates
+- Custom animation intervals and timing control
+- Thread-safe operations and proper resource cleanup
+
 ## Architecture
 
 ### Core Packages
 
 - **`ansi`** - ANSI color codes, styles, template formatting, icons, and terminal control sequences
-- **`components`** - Reusable UI components (Frame, Progress, etc.)
+- **`components`** - Reusable UI components (Frame, Progress, Spinner)
 - **`term`** - Terminal utilities, width detection, flexible layout system, and mathematical functions
 
 ### Design Principles

@@ -56,7 +56,7 @@ func (r rendererFunc) Render(p *Progress, w io.Writer) {
 func (r *charRenderer) Render(p *Progress, w io.Writer) {
 	// Calculate total available width (depends on context)
 	totalWidth := term.Width()
-	if p.inFrame {
+	if p.frameAware.InFrame() {
 		totalWidth = totalWidth - 6 // Account for frame borders and padding
 	}
 

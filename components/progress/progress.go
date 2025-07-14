@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/components/frame"
+	"github.com/pseudomuto/gooey/components/internal"
 	"github.com/pseudomuto/gooey/term"
 )
 
@@ -26,22 +25,15 @@ type (
 		current                int
 		color                  ansi.Color
 		width                  int
-		output                 io.Writer
+		frameAware             *internal.FrameAware
 		startTime              time.Time
 		message                string
 		completed              bool
-		inFrame                bool    // tracks if we're outputting to a frame
-		firstRender            bool    // tracks if this is the first render
 		lastRenderedPercentage float64 // tracks last rendered percentage for frame mode
 		renderer               ProgressRenderer
 	}
 
 	ProgressOption func(*Progress)
-
-	// FrameReplacer interface allows frames to update lines in place
-	FrameReplacer interface {
-		ReplaceLine(format string, a ...any)
-	}
 )
 
 // New creates a new progress bar with the given title and total steps.
@@ -66,12 +58,10 @@ func New(title string, total int, options ...ProgressOption) *Progress {
 		current:                0,
 		color:                  defaultProgressColor,
 		width:                  defaultProgressWidth,
-		output:                 defaultProgressOutput,
+		frameAware:             internal.NewFrameAware(defaultProgressOutput),
 		startTime:              time.Now(),
 		message:                "",
 		completed:              false,
-		inFrame:                false,
-		firstRender:            true,
 		lastRenderedPercentage: -1, // Initialize to -1 to ensure first render
 		renderer:               Bar,
 	}
@@ -79,9 +69,6 @@ func New(title string, total int, options ...ProgressOption) *Progress {
 	for _, option := range options {
 		option(p)
 	}
-
-	// Check if we're outputting to a frame
-	p.inFrame = isFrameWriter(p.output)
 
 	p.render()
 	return p
@@ -137,63 +124,17 @@ func (p *Progress) Complete(message string) {
 
 	// Add a newline after completion to move to next line, but only if not in a frame
 	// (frames handle their own line breaks)
-	if !p.inFrame {
-		fmt.Fprintln(p.output)
+	if !p.frameAware.InFrame() {
+		fmt.Fprintln(p.frameAware.Output())
 	}
 }
 
 // render draws the current progress bar state to the output writer.
 // This method handles cursor positioning to update the progress bar in-place.
 func (p *Progress) render() {
-	if p.inFrame {
-		// When inside a frame, use ReplaceLine for single-line updates
-		p.renderInFrame()
-	} else {
-		// Normal in-place rendering with cursor control
-		if p.firstRender {
-			// First render: just print the content
-			p.renderContent()
-			p.firstRender = false
-		} else {
-			// Subsequent renders: use carriage return and clear line for in-place update
-			fmt.Fprint(p.output, "\r"+ansi.ClearLine)
-			p.renderContent()
-		}
-	}
-}
-
-// renderContent renders the actual progress content using the renderer
-func (p *Progress) renderContent() {
-	p.renderer.Render(p, p.output)
-}
-
-// renderInFrame renders progress for frame context with single-line updates
-func (p *Progress) renderInFrame() {
-	if frameReplacer, ok := p.output.(FrameReplacer); ok {
-		// Always use string builder to ensure content is rendered as a single line
-		var contentBuilder strings.Builder
-		p.renderer.Render(p, &contentBuilder)
-
-		if p.firstRender {
-			// First render: use normal Println
-			fmt.Fprintln(p.output, contentBuilder.String())
-			p.firstRender = false
-		} else {
-			// Subsequent renders: use ReplaceLine for single-line updates
-			frameReplacer.ReplaceLine("%s", contentBuilder.String())
-		}
-	} else {
-		// Fallback if frame doesn't support ReplaceLine
-		var contentBuilder strings.Builder
-		p.renderer.Render(p, &contentBuilder)
-		fmt.Fprintln(p.output, contentBuilder.String())
-	}
-}
-
-// isFrameWriter checks if the writer is a frame by examining its type
-func isFrameWriter(w io.Writer) bool {
-	_, ok := w.(*frame.Frame)
-	return ok
+	p.frameAware.RenderWithStringBuilder(func(w io.Writer) {
+		p.renderer.Render(p, w)
+	})
 }
 
 // WithColor sets the color for the progress bar.
@@ -231,7 +172,7 @@ func WithWidth(width int) ProgressOption {
 //	p := progress.New("Task", 100, progress.WithOutput(&buf))
 func WithOutput(output io.Writer) ProgressOption {
 	return func(p *Progress) {
-		p.output = output
+		p.frameAware.SetOutput(output)
 	}
 }
 
@@ -303,7 +244,7 @@ func (p *Progress) Width() int {
 // This matches the three-section layout used by charRenderer.
 func (p *Progress) AvailableWidth() int {
 	totalWidth := term.Width()
-	if p.inFrame {
+	if p.frameAware.InFrame() {
 		totalWidth = totalWidth - 6 // Account for frame borders and padding
 	}
 
