@@ -259,6 +259,28 @@ func (sg *SpinGroup) runTask(task *Task) error {
 	// Render the task when it starts running (for non-frame cases)
 	sg.renderTaskStart(task)
 
+	// Start animation ticker for this task
+	animationTicker := time.NewTicker(100 * time.Millisecond)
+	animationDone := make(chan bool)
+
+	// Start animation goroutine
+	go func() {
+		for {
+			select {
+			case <-animationTicker.C:
+				// Only animate if task is still running
+				task.mutex.RLock()
+				if task.status == TaskRunning {
+					sg.renderTaskRunning(task)
+				}
+				task.mutex.RUnlock()
+			case <-animationDone:
+				animationTicker.Stop()
+				return
+			}
+		}
+	}()
+
 	// Execute task with context
 	done := make(chan error, 1)
 	go func() {
@@ -273,6 +295,9 @@ func (sg *SpinGroup) runTask(task *Task) error {
 		// Task was cancelled
 		result = sg.ctx.Err()
 	}
+
+	// Stop animation
+	animationDone <- true
 
 	// Update task status based on result
 	task.mutex.Lock()
@@ -306,6 +331,27 @@ func (sg *SpinGroup) renderTaskStart(task *Task) {
 		}
 	} else {
 		fmt.Fprintf(output, "%s\n", line)
+	}
+}
+
+// renderTaskRunning renders a task while it's running (for animation)
+func (sg *SpinGroup) renderTaskRunning(task *Task) {
+	sg.renderMutex.Lock()
+	defer sg.renderMutex.Unlock()
+
+	output := sg.frameAware.Output()
+	task.mutex.RLock()
+	line := sg.formatTaskLine(TaskRunning, task.name, task.startTime)
+	task.mutex.RUnlock()
+
+	if sg.frameAware.InFrame() {
+		if frameWriter, ok := output.(*frame.Frame); ok {
+			// For frames, use ReplaceLine to update the running task line with animation
+			frameWriter.ReplaceLine("%s", line)
+		}
+	} else {
+		// For non-frame, replace the last line with updated animation
+		fmt.Fprint(output, ansi.MoveCursorUp(1)+ansi.ClearLine+line+"\n")
 	}
 }
 
