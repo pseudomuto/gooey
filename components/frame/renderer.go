@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/term"
+	"github.com/pseudomuto/gooey/internal/term"
 )
 
 const (

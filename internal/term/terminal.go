@@ -1,6 +1,7 @@
 package term
 
 import (
+	"os"
 	"regexp"
 	"strings"
 	"syscall"
@@ -43,6 +44,26 @@ func Width() int {
 	}
 
 	return int(ws.Col)
+}
+
+// IsTTY returns true if the current environment supports TTY operations and ANSI escape sequences.
+// This is used to determine whether cursor positioning and other terminal control sequences will work.
+//
+// Example:
+//
+//	if term.IsTTY() {
+//		// Use ANSI escape sequences for cursor control
+//		fmt.Print("\033[1A\033[K")
+//	} else {
+//		// Fall back to simpler output without cursor control
+//		fmt.Println("Updated content")
+//	}
+func IsTTY() bool {
+	// Check if stdout is a terminal
+	if fileInfo, err := os.Stdout.Stat(); err == nil {
+		return (fileInfo.Mode() & os.ModeCharDevice) != 0
+	}
+	return false
 }
 
 // PrintableWidth returns the width of printable characters in a string, excluding ANSI escape sequences.

@@ -100,6 +100,20 @@ func (l SectionLayout) SectionWidths() []int {
 }
 
 // WithMinWidths sets minimum widths for each section and returns the updated layout.
+// This method ensures that no section will be smaller than its minimum width,
+// even when proportional scaling would make it smaller.
+//
+// Example:
+//
+//	// Create layout with minimum constraints
+//	layout := term.NewSectionLayout(100, 1, 3, 1).WithMinWidths(15, 20, 10)
+//	widths := layout.SectionWidths() // Ensures sections are at least 15, 20, 10 wide
+//
+//	// Without minimums: might get [20, 60, 20]
+//	// With minimums: might get [20, 60, 20] or [15, 65, 20] depending on constraints
+//
+// If the sum of minimum widths exceeds the total width, the layout will
+// still attempt to fit all sections by proportionally reducing non-minimum space.
 func (l SectionLayout) WithMinWidths(minWidths ...int) SectionLayout {
 	l.MinWidths = minWidths
 	return l

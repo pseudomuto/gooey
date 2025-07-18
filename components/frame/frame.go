@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/term"
+	"github.com/pseudomuto/gooey/internal/term"
 )
 
 const (
@@ -257,9 +257,99 @@ func (f *Frame) ReplaceLine(format string, a ...any) {
 	// Format the content with proper frame styling
 	formattedLine := f.formatContentLine(content)
 
-	// Write cursor control directly to the underlying output to bypass frame processing
-	// This ensures ANSI sequences are interpreted as control commands, not text
-	fmt.Fprint(f.output, ansi.MoveCursorUp(1)+ansi.ClearLine+formattedLine+"\n")
+	// Check if we're in a TTY environment that supports ANSI escape sequences
+	if term.IsTTY() {
+		// Write cursor control directly to the underlying output to bypass frame processing
+		// This ensures ANSI sequences are interpreted as control commands, not text
+		fmt.Fprint(f.output, ansi.MoveCursorUp(1)+ansi.ClearLine+formattedLine+"\n")
+	} else {
+		// Non-TTY environment: just append the update as a new line
+		fmt.Fprintf(f.output, "%s\n", formattedLine)
+	}
+}
+
+// ReplaceLineN replaces the Nth line from the current cursor position with new content
+// linePosition 1 means the line directly above, 2 means two lines above, etc.
+// This allows components to update specific lines by their position
+func (f *Frame) ReplaceLineN(linePosition int, format string, a ...any) {
+	if linePosition < 1 {
+		// Invalid position, fall back to ReplaceLine
+		f.ReplaceLine(format, a...)
+		return
+	}
+
+	content := fmt.Sprintf(format, a...)
+	formattedLine := f.formatContentLine(content)
+
+	// Check if we're in a TTY environment that supports ANSI escape sequences
+	if term.IsTTY() {
+		// Move up, clear line, write content, then move back down to original position
+		moveUp := ansi.MoveCursorUp(linePosition)
+		moveDown := ansi.MoveCursorDown(linePosition)
+		fmt.Fprint(f.output, moveUp+ansi.ClearLine+formattedLine+moveDown)
+	} else {
+		// Non-TTY environment: just append the update as a new line
+		fmt.Fprintf(f.output, "%s\n", formattedLine)
+	}
+}
+
+// ReplaceBlock replaces the last N lines with new content lines
+// This is more reliable than individual line replacements for multi-line content
+func (f *Frame) ReplaceBlock(lineCount int, lines []string) {
+	if lineCount < 1 {
+		return
+	}
+
+	// If no new lines, just clear the old content
+	if len(lines) == 0 {
+		if lineCount > 1 {
+			fmt.Fprint(f.output, ansi.MoveCursorUp(lineCount-1))
+		}
+		for i := 0; i < lineCount; i++ {
+			fmt.Fprint(f.output, ansi.ClearLine)
+			if i < lineCount-1 {
+				fmt.Fprint(f.output, "\n")
+			}
+		}
+		return
+	}
+
+	// Move cursor to the beginning of the block we want to replace
+	if lineCount > 1 {
+		fmt.Fprint(f.output, ansi.MoveCursorUp(lineCount-1))
+	}
+
+	// Clear all old lines first
+	for i := 0; i < lineCount; i++ {
+		fmt.Fprint(f.output, ansi.ClearLine)
+		if i < lineCount-1 {
+			fmt.Fprint(f.output, "\n")
+		}
+	}
+
+	// Move cursor back to the beginning of the cleared area
+	if lineCount > 1 {
+		fmt.Fprint(f.output, ansi.MoveCursorUp(lineCount-1))
+	}
+
+	// Write new content
+	for i, line := range lines {
+		formattedLine := f.formatContentLine(line)
+		fmt.Fprint(f.output, formattedLine)
+
+		// Add newline except for the last line
+		if i < len(lines)-1 {
+			fmt.Fprint(f.output, "\n")
+		}
+	}
+
+	// If new content has more lines than old content, add them
+	if len(lines) > lineCount {
+		for i := lineCount; i < len(lines); i++ {
+			formattedLine := f.formatContentLine(lines[i])
+			fmt.Fprint(f.output, "\n"+formattedLine)
+		}
+	}
 }
 
 // WithColor sets the color for the frame's border and content prefixes.

@@ -7,6 +7,7 @@ A Go CLI UI library inspired by [Shopify's cli-ui](https://github.com/Shopify/cl
 - **Frame Components**: Create bordered content areas with nested frame support
 - **Progress Components**: Interactive progress bars with extensible renderers, adaptive width calculation, real-time updates, and seamless frame integration
 - **Spinner Components**: Animated loading indicators with automatic color rotation (Red→Blue→Cyan→Magenta), multiple animation styles, and real-time message updates
+- **SpinGroup Components**: Coordinated execution of multiple sequential tasks with individual spinners and status tracking
 - **ANSI Color Support**: Rich color and styling with template-based formatting
 - **Multiple Frame Styles**: Box and bracket frame styles
 - **Automatic Formatting**: Smart content alignment and border management
@@ -23,265 +24,7 @@ go get github.com/pseudomuto/gooey
 
 ## Quick Start
 
-### Basic Frame Usage
-
-```go
-package main
-
-import (
-    "github.com/pseudomuto/gooey/ansi"
-    "github.com/pseudomuto/gooey/components/frame"
-)
-
-func main() {
-    // Create a basic frame
-    f := frame.Open("My Application")
-    f.Println("Welcome to my CLI tool!")
-    f.Println("This content is automatically formatted")
-    f.Close()
-}
-```
-
-### Nested Frames with Colors
-
-```go
-// Outer frame
-outer := frame.Open("Deployment", frame.WithColor(ansi.Blue))
-outer.Println("Starting deployment process...")
-
-// Inner frame for specific task
-inner := frame.Open("Database Migration", frame.WithColor(ansi.Green))
-inner.Println("Migrating database schema...")
-inner.Println("Migration completed successfully")
-inner.Close()
-
-outer.Println("Deployment completed!")
-outer.Close()
-```
-
-### Frame Styles and Dividers
-
-```go
-// Box style (default)
-boxFrame := frame.Open("Box Style", frame.WithStyle(frame.Box))
-boxFrame.Println("This uses full box borders")
-boxFrame.Divider("Section Break")
-boxFrame.Println("Content after divider")
-boxFrame.Close()
-
-// Bracket style
-bracketFrame := frame.Open("Bracket Style", frame.WithStyle(frame.Bracket))
-bracketFrame.Println("This uses simple bracket markers")
-bracketFrame.Close()
-```
-
-### Progress Bars
-
-```go
-package main
-
-import (
-    "fmt"
-    "io"
-    "time"
-    
-    "github.com/pseudomuto/gooey/ansi"
-    "github.com/pseudomuto/gooey/components/progress"
-    "github.com/pseudomuto/gooey/components/frame"
-)
-
-func main() {
-    // Basic progress bar
-    p := progress.New("Downloading files", 100)
-    for i := 0; i <= 100; i += 10 {
-        p.Update(i, fmt.Sprintf("Downloaded %d files", i))
-        time.Sleep(100 * time.Millisecond)
-    }
-    p.Complete("All files downloaded!")
-
-    // Different built-in styles
-    p1 := progress.New("Processing", 50, 
-        progress.WithRenderer(progress.Bar), 
-        progress.WithColor(ansi.Green))
-        
-    p2 := progress.New("Uploading", 25, 
-        progress.WithRenderer(progress.Minimal), 
-        progress.WithColor(ansi.Blue))
-        
-    p3 := progress.New("Installing", 20, 
-        progress.WithRenderer(progress.Dots), 
-        progress.WithColor(ansi.Yellow),
-        progress.WithWidth(30))
-
-    // Custom renderer with function
-    p4 := progress.New("Processing", 10,
-        progress.WithRenderer(progress.RenderFunc(func(p *progress.Progress, w io.Writer) {
-            percentage := p.Percentage()
-            if percentage < 50 {
-                fmt.Fprintf(w, "%s: 🔴 %.1f%%", p.Title(), percentage)
-            } else {
-                fmt.Fprintf(w, "%s: 🟢 %.1f%%", p.Title(), percentage)
-            }
-        })))
-
-    // Progress bars work seamlessly within frames
-    f := frame.Open("Deployment", frame.WithColor(ansi.Cyan))
-    p5 := progress.New("Building", 8, 
-        progress.WithColor(ansi.Green),
-        progress.WithOutput(f))
-    
-    for i := 0; i <= 8; i++ {
-        p5.Update(i, fmt.Sprintf("Step %d", i))
-        time.Sleep(200 * time.Millisecond)
-    }
-    p5.Complete("Build completed!")
-    f.Close()
-}
-```
-
-### Spinner Animations
-
-```go
-package main
-
-import (
-    "fmt"
-    "io"
-    "time"
-    
-    "github.com/pseudomuto/gooey/ansi"
-    "github.com/pseudomuto/gooey/components/frame"
-    "github.com/pseudomuto/gooey/components/spinner"
-)
-
-func main() {
-    // Basic spinner with automatic color rotation (Red→Blue→Cyan→Magenta)
-    s := spinner.New("Loading data...")
-    s.Start()
-    time.Sleep(3 * time.Second)
-    s.Stop()
-
-    // Custom spinner with fixed color and no elapsed time display
-    s2 := spinner.New("Processing files...",
-        spinner.WithColor(ansi.Green),
-        spinner.WithRenderer(spinner.Clock),
-        spinner.WithInterval(200*time.Millisecond),
-        spinner.WithShowElapsed(false)) // Disable elapsed time display
-    
-    s2.Start()
-    time.Sleep(2 * time.Second)
-    
-    s2.UpdateMessage("Almost done...")
-    time.Sleep(1 * time.Second)
-    
-    s2.Stop()
-
-    // Different built-in animation styles
-    s3 := spinner.New("Dots animation", 
-        spinner.WithRenderer(spinner.Dots))    // 8-frame braille spinner
-        
-    s4 := spinner.New("Clock animation", 
-        spinner.WithRenderer(spinner.Clock))   // 4-frame subset
-        
-    s5 := spinner.New("Arrow animation", 
-        spinner.WithRenderer(spinner.Arrow))   // Directional arrows
-
-    // Custom renderer with function
-    s6 := spinner.New("Custom animation",
-        spinner.WithRenderer(spinner.RenderFunc(func(s *spinner.Spinner, frame int, w io.Writer) {
-            icons := []string{"◐", "◓", "◑", "◒"}
-            color := s.CurrentColor(frame) // Access automatic color rotation
-            icon := icons[frame%len(icons)]
-            fmt.Fprintf(w, "%s %s", ansi.Icon(icon).Colorize(color), s.Message())
-        })))
-
-    // Spinners work seamlessly within frames
-    f := frame.Open("Deployment", frame.WithColor(ansi.Cyan))
-    s7 := spinner.New("Building application...", 
-        spinner.WithOutput(f))
-    
-    s7.Start()
-    time.Sleep(2 * time.Second)
-    s7.UpdateMessage("Finalizing...")
-    time.Sleep(1 * time.Second)
-    s7.Stop()
-    
-    f.Println("Build completed!")
-    f.Close()
-}
-```
-
-### ANSI Template Formatting
-
-```go
-// Using ansi.Formatter for template processing
-fmtr := ansi.NewFormatter(os.Stdout)
-f := frame.Open("{{rocket:}} Deployment", frame.WithColor(ansi.Blue), frame.WithOutput(fmtr))
-f.Println("Processing {{bold+cyan:important}} data...")
-f.Println("Status: {{green:SUCCESS}}")
-f.Println("Result: {{check:}} Task completed")
-f.Close()
-
-// One-off formatting without creating a formatter
-formatted := ansi.Format("{{bold+red:Error}}: Operation failed")
-fmt.Println(formatted)
-
-// Quick colorization with sprintf-style formatting
-text := ansi.Colorize("Progress: {{green:%d%%}} complete", 75)
-fmt.Println(text)
-```
-
-### Icons and Status Indicators
-
-```go
-// Using predefined icons
-fmt.Println(ansi.CheckMark.Colorize(ansi.Green), "Task completed")
-fmt.Println(ansi.Warning.Colorize(ansi.Yellow), "Warning message")
-
-// Using icon sets
-taskIcon := ansi.GetTaskIcon("completed")
-fmt.Printf("%s Task finished\n", taskIcon.Colorize(ansi.Green))
-
-// Template-based icon usage
-fmt.Println(ansi.Format("{{check:}} Success"))
-fmt.Println(ansi.Format("{{warning:}} Warning"))
-fmt.Println(ansi.Format("{{error:}} Failed"))
-fmt.Println(ansi.Format("{{rocket:}} Launching..."))
-
-// Terminal control
-fmt.Print(ansi.ClearScreen)
-fmt.Print(ansi.MoveCursor(10, 5))
-fmt.Println("Text at specific position")
-```
-
-### Flexible Layout System
-
-The `term.SectionLayout` provides a powerful system for creating multi-column layouts with proportional widths:
-
-```go
-import "github.com/pseudomuto/gooey/term"
-
-// Create a 3-column layout with 20%, 60%, 20% proportions
-layout := term.NewSectionLayout(100, 1, 3, 1)
-widths := layout.SectionWidths() // Returns [20, 60, 20]
-
-// With minimum width constraints
-layout = term.NewSectionLayout(100, 1, 3, 1).WithMinWidths(10, 20, 8)
-widths = layout.SectionWidths() // Respects minimums
-
-// 2-column layout
-layout = term.NewSectionLayout(100, 2, 3) // 40:60 split
-
-// 4-column equal layout
-layout = term.NewSectionLayout(100, 1, 1, 1, 1) // 25% each
-
-// Float weights work too
-layout = term.NewSectionLayout(100, 0.5, 1.5, 0.5) // 20:60:20
-
-// Text formatting utilities
-formatted := term.TruncateAndPad("Hello", 10) // "Hello     "
-formatted = term.TruncateAndPad("Hello World", 8) // "Hello..."
-```
+See the [examples directory](./examples) for working code examples of all components.
 
 ## API Reference
 
@@ -340,23 +83,7 @@ formatted = term.TruncateAndPad("Hello World", 8) // "Hello..."
 
 ### Custom Progress Renderers
 
-```go
-// Implement the ProgressRenderer interface
-type customRenderer struct{}
-
-func (r *customRenderer) Render(p *progress.Progress, w io.Writer) {
-    fmt.Fprintf(w, "Custom: %s %.1f%%", p.Title(), p.Percentage())
-}
-
-// Use with WithRenderer option
-p := progress.New("Task", 100, progress.WithRenderer(&customRenderer{}))
-
-// Or use RenderFunc for inline custom renderers
-p := progress.New("Task", 100, 
-    progress.WithRenderer(progress.RenderFunc(func(p *progress.Progress, w io.Writer) {
-        // Custom rendering logic here
-    })))
-```
+Implement the `ProgressRenderer` interface for custom styling or use `RenderFunc` for inline custom renderers.
 
 ### Spinner Methods
 
@@ -387,45 +114,27 @@ p := progress.New("Task", 100,
 
 ### Custom Spinner Renderers
 
-```go
-// Implement the SpinnerRenderer interface
-type customRenderer struct{}
+Implement the `SpinnerRenderer` interface for custom animations or use `RenderFunc` for inline custom renderers.
 
-func (r *customRenderer) Render(s *spinner.Spinner, frame int, w io.Writer) {
-    color := s.CurrentColor(frame) // Access automatic color rotation
-    fmt.Fprintf(w, "Custom: %s %s", color.Colorize("●"), s.Message())
-}
+### SpinGroup Methods
 
-// Use with WithRenderer option
-s := spinner.New("Task", spinner.WithRenderer(&customRenderer{}))
+- `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution
+- `spinGroup.AddTask(name string, taskFunc func() error) int` - Add a task to the group and return its ID
+- `spinGroup.Start()` - Start executing all tasks sequentially
+- `spinGroup.Stop()` - Stop the spin group execution
+- `spinGroup.Wait()` - Wait for all tasks to complete
 
-// Or use RenderFunc for inline custom renderers
-s := spinner.New("Task", 
-    spinner.WithRenderer(spinner.RenderFunc(func(s *spinner.Spinner, frame int, w io.Writer) {
-        // Custom rendering logic here
-        // s.CurrentColor(frame) provides automatic color rotation
-    })))
-```
+### SpinGroup Options
 
-### Layout System API
+- `spinner.WithSpinGroupOutput(w io.Writer)` - Set custom output writer for the spin group
 
-#### SectionLayout
+### Task Status Types
 
-- `term.NewSectionLayout(totalWidth int, weights ...float64) SectionLayout` - Create layout with proportional column weights
-- `layout.WithMinWidths(minWidths ...int) SectionLayout` - Set minimum width constraints per column
-- `layout.SectionWidths() []int` - Calculate actual column widths with smart scaling
+- `spinner.TaskPending` - Task has not yet started
+- `spinner.TaskRunning` - Task is currently executing
+- `spinner.TaskCompleted` - Task finished successfully
+- `spinner.TaskFailed` - Task failed with an error
 
-#### Text Utilities
-
-- `term.TruncateAndPad(text string, maxWidth int) string` - Truncate text with "..." and pad to exact width
-- `term.PrintableWidth(text string) int` - Get display width excluding ANSI escape sequences
-- `term.TruncateString(text string, maxWidth int) string` - Truncate string while preserving ANSI formatting
-- `term.StripCodes(text string) string` - Remove ANSI escape sequences
-
-#### Mathematical Utilities
-
-- `term.Max(a, b int) int` - Return the larger of two integers
-- `term.Min(a, b int) int` - Return the smaller of two integers
 
 ## Examples
 
@@ -442,6 +151,10 @@ go run .
 
 # Spinner component examples
 cd examples/spinner
+go run .
+
+# SpinGroup component examples
+cd examples/spingroup
 go run .
 ```
 
@@ -476,13 +189,20 @@ The spinner examples demonstrate:
 - Custom animation intervals and timing control
 - Thread-safe operations and proper resource cleanup
 
+The SpinGroup examples demonstrate:
+- Sequential task execution with coordinated spinners
+- Task status tracking (Pending, Running, Completed, Failed)
+- Error handling and failure reporting
+- Frame integration for organized display
+- Context-based control and cancellation
+- Thread-safe operations with concurrent access
+
 ## Architecture
 
 ### Core Packages
 
 - **`ansi`** - ANSI color codes, styles, template formatting, icons, and terminal control sequences
-- **`components`** - Reusable UI components (Frame, Progress, Spinner)
-- **`term`** - Terminal utilities, width detection, flexible layout system, and mathematical functions
+- **`components`** - Reusable UI components (Frame, Progress, Spinner, SpinGroup)
 
 ### Design Principles
 
@@ -523,19 +243,7 @@ go mod tidy
 
 ### Testing
 
-Tests use buffer-based output verification:
-
-```go
-func TestFrame(t *testing.T) {
-    var buf bytes.Buffer
-    frame := frame.Open("Test", frame.WithOutput(&buf))
-    frame.Println("test content")
-    frame.Close()
-
-    output := buf.String()
-    require.Contains(t, output, "test content")
-}
-```
+Tests use buffer-based output verification to capture and validate terminal output.
 
 ## Contributing
 

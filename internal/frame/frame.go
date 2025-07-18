@@ -1,4 +1,4 @@
-package internal
+package frame
 
 import (
 	"fmt"
@@ -9,9 +9,13 @@ import (
 	"github.com/pseudomuto/gooey/components/frame"
 )
 
-// FrameReplacer interface allows frames to update lines in place
+// FrameReplacer interface allows frames to update lines in place.
+// This interface is used by components that need to update their output
+// dynamically, such as progress bars and spinners.
 type FrameReplacer interface {
 	ReplaceLine(format string, a ...any)
+	ReplaceLineN(linePosition int, format string, a ...any)
+	ReplaceBlock(lineCount int, lines []string)
 }
 
 // FrameAware provides common frame integration functionality for components
@@ -21,7 +25,26 @@ type FrameAware struct {
 	firstRender bool
 }
 
-// NewFrameAware creates a new frame-aware utility for the given output writer
+// NewFrameAware creates a new frame-aware utility for the given output writer.
+// This utility helps components integrate seamlessly with the frame system,
+// providing automatic frame detection and adaptive rendering behavior.
+//
+// Example:
+//
+//	// Create a frame-aware component
+//	fa := frame.NewFrameAware(os.Stdout)
+//	if fa.InFrame() {
+//		// Render for frame context
+//		fa.RenderWithStringBuilder(func(sb *strings.Builder) {
+//			sb.WriteString("Frame content")
+//		})
+//	} else {
+//		// Render for standalone context
+//		fa.RenderContent("Standalone content")
+//	}
+//
+// The frame-aware utility automatically detects frame contexts and
+// enables single-line updates for real-time progress components.
 func NewFrameAware(output io.Writer) *FrameAware {
 	return &FrameAware{
 		output:      output,
@@ -30,18 +53,23 @@ func NewFrameAware(output io.Writer) *FrameAware {
 	}
 }
 
-// IsFrameWriter checks if the writer is a frame by examining its type
+// IsFrameWriter checks if the writer is a frame by examining its type.
+// This function determines if the writer supports frame-specific operations
+// like single-line updates and frame-aware rendering.
 func IsFrameWriter(w io.Writer) bool {
 	_, ok := w.(*frame.Frame)
 	return ok
 }
 
-// Output returns the current output writer
+// Output returns the current output writer.
+// This is the underlying writer that receives all rendered content.
 func (fa *FrameAware) Output() io.Writer {
 	return fa.output
 }
 
-// InFrame returns true if the output is a frame
+// InFrame returns true if the output is a frame.
+// This can be used to conditionally render content differently
+// based on whether it's inside a frame context.
 func (fa *FrameAware) InFrame() bool {
 	return fa.inFrame
 }
@@ -87,6 +115,7 @@ func (fa *FrameAware) renderInFrame(content string) {
 	} else {
 		// Fallback if frame doesn't support ReplaceLine
 		fmt.Fprintln(fa.output, content)
+		fa.firstRender = false
 	}
 }
 
@@ -134,7 +163,11 @@ func (fa *FrameAware) renderInFrameWithBuilder(renderFunc func(w io.Writer)) {
 		fmt.Fprintln(fa.output, content)
 		fa.firstRender = false
 	} else {
-		fa.replaceLineInFrame(content)
+		if frameReplacer, ok := fa.output.(FrameReplacer); ok {
+			frameReplacer.ReplaceLine("%s", content)
+		} else {
+			fmt.Fprintln(fa.output, content)
+		}
 	}
 }
 
@@ -146,14 +179,5 @@ func (fa *FrameAware) renderStandaloneWithFunc(renderFunc func(w io.Writer)) {
 	} else {
 		fmt.Fprint(fa.output, "\r"+ansi.ClearLine)
 		renderFunc(fa.output)
-	}
-}
-
-// replaceLineInFrame attempts to use ReplaceLine or falls back to normal printing
-func (fa *FrameAware) replaceLineInFrame(content string) {
-	if frameReplacer, ok := fa.output.(FrameReplacer); ok {
-		frameReplacer.ReplaceLine("%s", content)
-	} else {
-		fmt.Fprintln(fa.output, content)
 	}
 }

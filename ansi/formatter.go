@@ -43,7 +43,16 @@ func NewFormatter(w io.Writer) *Formatter {
 	return f
 }
 
-// NewFormatterTo creates a formatter with automatic color/style detection
+// NewFormatterTo creates a formatter that writes to the given writer.
+// This is an alias for NewFormatter and provides the same functionality.
+//
+// Example:
+//
+//	formatter := ansi.NewFormatterTo(os.Stdout)
+//	formatter.Printf("{{bold+red:Error}}: File not found\n")
+//
+// This function exists for compatibility and consistency with other
+// Go libraries that use the "To" suffix for writer-based constructors.
 func NewFormatterTo(w io.Writer) *Formatter {
 	return NewFormatter(w)
 }

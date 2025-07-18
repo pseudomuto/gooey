@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/pseudomuto/gooey/term"
+	"github.com/pseudomuto/gooey/internal/term"
 )
 
 var (
@@ -38,6 +38,21 @@ type (
 	rendererFunc func(*Progress, io.Writer)
 )
 
+// NewChar creates a new character-based progress renderer.
+// The completed string is used for filled portions of the progress bar,
+// and the pending string is used for unfilled portions.
+//
+// Example:
+//
+//	// Create a custom progress bar using different characters
+//	customRenderer := progress.NewChar("█", "░")
+//	p := progress.New("Processing", 100, progress.WithRenderer(customRenderer))
+//
+//	// ASCII-friendly progress bar
+//	asciiRenderer := progress.NewChar("=", "-")
+//	p := progress.New("Upload", 50, progress.WithRenderer(asciiRenderer))
+//
+// The renderer automatically handles width calculations and proportional filling.
 func NewChar(completed, pending string) ProgressRenderer {
 	return &charRenderer{
 		completed: completed,
@@ -45,14 +60,36 @@ func NewChar(completed, pending string) ProgressRenderer {
 	}
 }
 
+// RenderFunc creates a progress renderer from a function.
+// This allows for inline custom renderers without implementing the ProgressRenderer interface.
+//
+// Example:
+//
+//	// Custom renderer with emojis based on progress
+//	customRenderer := progress.RenderFunc(func(p *progress.Progress, w io.Writer) {
+//		percentage := p.Percentage()
+//		if percentage < 50 {
+//			fmt.Fprintf(w, "🔴 %s: %.1f%%", p.Title(), percentage)
+//		} else {
+//			fmt.Fprintf(w, "🟢 %s: %.1f%%", p.Title(), percentage)
+//		}
+//	})
+//
+//	p := progress.New("Processing", 100, progress.WithRenderer(customRenderer))
+//
+// The function receives the progress instance and a writer for output.
 func RenderFunc(fn func(*Progress, io.Writer)) ProgressRenderer {
 	return rendererFunc(fn)
 }
 
+// Render implements the ProgressRenderer interface for rendererFunc.
 func (r rendererFunc) Render(p *Progress, w io.Writer) {
 	r(p, w)
 }
 
+// Render implements the ProgressRenderer interface for charRenderer.
+// It renders a character-based progress bar with three sections:
+// title (20%), progress bar (70%), and update text (10%).
 func (r *charRenderer) Render(p *Progress, w io.Writer) {
 	// Calculate total available width (depends on context)
 	totalWidth := term.Width()

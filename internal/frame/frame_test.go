@@ -1,4 +1,4 @@
-package internal
+package frame
 
 import (
 	"bytes"
@@ -37,6 +37,18 @@ func (m *mockFrameReplacer) ReplaceLine(format string, a ...interface{}) {
 	})
 	// Also write to buffer for verification
 	fmt.Fprintf(m.Buffer, format, a...)
+}
+
+func (m *mockFrameReplacer) ReplaceLineN(linePosition int, format string, a ...interface{}) {
+	// For testing, we can treat this the same as ReplaceLine
+	m.ReplaceLine(format, a...)
+}
+
+func (m *mockFrameReplacer) ReplaceBlock(lineCount int, lines []string) {
+	// For testing, we can append each line as a separate ReplaceLine call
+	for _, line := range lines {
+		m.ReplaceLine("%s", line)
+	}
 }
 
 func TestNewFrameAware(t *testing.T) {

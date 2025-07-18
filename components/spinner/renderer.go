@@ -8,16 +8,21 @@ import (
 )
 
 var (
-	Dots  = &dotsRenderer{}
+	// Dots renderer uses spinning dots for the spinner animation
+	Dots = &dotsRenderer{}
+	// Clock renderer uses clock icons for the spinner animation
 	Clock = &clockRenderer{}
+	// Arrow renderer uses arrow icons for the spinner animation
 	Arrow = &arrowRenderer{}
 )
 
 type (
+	// SpinnerRenderer defines the interface for rendering spinner animations
 	SpinnerRenderer interface {
 		Render(s *Spinner, frame int, w io.Writer)
 	}
 
+	// RenderFunc is a function type that implements SpinnerRenderer
 	RenderFunc func(s *Spinner, frame int, w io.Writer)
 
 	dotsRenderer  struct{}
@@ -25,6 +30,7 @@ type (
 	arrowRenderer struct{}
 )
 
+// Render executes the render function for the spinner
 func (f RenderFunc) Render(s *Spinner, frame int, w io.Writer) {
 	f(s, frame, w)
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattn/go-isatty"
-	. "github.com/pseudomuto/gooey/term"
+	. "github.com/pseudomuto/gooey/internal/term"
 	"github.com/stretchr/testify/require"
 )
 

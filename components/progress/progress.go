@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/components/internal"
-	"github.com/pseudomuto/gooey/term"
+	"github.com/pseudomuto/gooey/internal/frame"
+	"github.com/pseudomuto/gooey/internal/term"
 )
 
 const (
@@ -25,7 +25,7 @@ type (
 		current                int
 		color                  ansi.Color
 		width                  int
-		frameAware             *internal.FrameAware
+		frameAware             *frame.FrameAware
 		startTime              time.Time
 		message                string
 		completed              bool
@@ -58,7 +58,7 @@ func New(title string, total int, options ...ProgressOption) *Progress {
 		current:                0,
 		color:                  defaultProgressColor,
 		width:                  defaultProgressWidth,
-		frameAware:             internal.NewFrameAware(defaultProgressOutput),
+		frameAware:             frame.NewFrameAware(defaultProgressOutput),
 		startTime:              time.Now(),
 		message:                "",
 		completed:              false,
