@@ -1,5 +1,9 @@
 # Gooey
 
+[![CI](https://github.com/pseudomuto/gooey/workflows/CI/badge.svg)](https://github.com/pseudomuto/gooey/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/pseudomuto/gooey.svg)](https://pkg.go.dev/github.com/pseudomuto/gooey)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pseudomuto/gooey)](https://goreportcard.com/report/github.com/pseudomuto/gooey)
+
 A Go CLI UI library inspired by [Shopify's cli-ui](https://github.com/Shopify/cli-ui), providing beautiful terminal interfaces for command-line applications.
 
 ## Features
