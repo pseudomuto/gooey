@@ -5,7 +5,7 @@ project_name: gooey
 before:
   hooks:
     - go mod tidy
-    - task test
+    - go test ./...
 
 builds:
   - skip: true
