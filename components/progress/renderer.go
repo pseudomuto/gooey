@@ -158,6 +158,8 @@ func (r *charRenderer) buildProgressSection(p *Progress, sectionWidth int) strin
 	return progressSection.String()
 }
 
+// Render implements ProgressRenderer for minimal style progress display.
+// Shows only percentage completion and current message without visual progress bar.
 func (r *minimalRenderer) Render(p *Progress, w io.Writer) {
 	percentage := float64(p.current) / float64(p.total) * 100
 

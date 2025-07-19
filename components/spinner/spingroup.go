@@ -166,7 +166,8 @@ func (sg *SpinGroup) Start() {
 	go sg.executeTasksSequentially()
 }
 
-// Stop stops the spin group execution
+// Stop stops the spin group execution and cancels any running tasks.
+// This method is safe to call multiple times and from different goroutines.
 func (sg *SpinGroup) Stop() {
 	sg.tasksMutex.Lock()
 	if !sg.running {
@@ -181,7 +182,9 @@ func (sg *SpinGroup) Stop() {
 	sg.cancel()
 }
 
-// Wait waits for all tasks to complete or for execution to stop
+// Wait waits for all tasks to complete or for execution to stop.
+// This method blocks until either all tasks finish (successfully or with failure)
+// or the spin group is stopped. It's safe to call from multiple goroutines.
 func (sg *SpinGroup) Wait() {
 	for {
 		sg.tasksMutex.RLock()

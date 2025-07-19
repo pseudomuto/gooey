@@ -94,7 +94,8 @@ Implement the `ProgressRenderer` interface for custom styling or use `RenderFunc
 
 - `spinner.New(message string, options ...SpinnerOption) *Spinner` - Create and initialize a new animated spinner
 - `spinner.Start()` - Start the spinner animation in a background goroutine
-- `spinner.Stop()` - Stop the spinner animation and show completion with elapsed time
+- `spinner.Stop()` - Stop the spinner animation and show successful completion with green checkmark
+- `spinner.Fail()` - Stop the spinner animation and show failure with red crossmark
 - `spinner.UpdateMessage(message string)` - Update the spinner message while running
 - `spinner.IsRunning() bool` - Check if the spinner is currently animating
 - `spinner.Message() string` - Get the current spinner message
@@ -102,6 +103,7 @@ Implement the `ProgressRenderer` interface for custom styling or use `RenderFunc
 - `spinner.CurrentColor(frame int) ansi.Color` - Get the color for a specific animation frame (handles rotation)
 - `spinner.Elapsed() time.Duration` - Get elapsed time since spinner started
 - `spinner.ShowElapsed() bool` - Check if elapsed time will be shown on completion
+- `spinner.State() SpinnerState` - Get the current completion state (SpinnerCompleted or SpinnerFailed)
 
 ### Spinner Options
 
@@ -190,6 +192,8 @@ The spinner examples demonstrate:
 - Custom renderers with SpinnerRenderer interface and RenderFunc
 - Fixed color override with WithColor option
 - Real-time message updates while spinning
+- **Dual completion modes**: successful completion with green checkmark (✓) and failure with red crossmark (✗)
+- **State management**: explicit tracking of completion status with SpinnerState
 - Seamless integration with frames using single-line updates
 - Custom animation intervals and timing control
 - Thread-safe operations and proper resource cleanup

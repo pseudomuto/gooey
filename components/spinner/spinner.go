@@ -13,6 +13,11 @@ import (
 
 const (
 	defaultSpinnerInterval = 100 * time.Millisecond
+
+	// SpinnerCompleted indicates the spinner finished successfully
+	SpinnerCompleted SpinnerState = iota
+	// SpinnerFailed indicates the spinner finished with an error
+	SpinnerFailed
 )
 
 var (
@@ -27,6 +32,9 @@ var (
 )
 
 type (
+	// SpinnerState represents the completion state of a spinner
+	SpinnerState int
+
 	// Spinner represents an animated spinner that can display progress
 	Spinner struct {
 		message        string
@@ -37,6 +45,7 @@ type (
 		frameAware     *frame.FrameAware
 		interval       time.Duration
 		running        bool
+		state          SpinnerState
 		startTime      time.Time
 		stopChan       chan bool
 		mutex          sync.RWMutex
@@ -89,6 +98,7 @@ func New(message string, options ...SpinnerOption) *Spinner {
 		frameAware:  frame.NewFrameAware(defaultSpinnerOutput),
 		interval:    defaultSpinnerInterval,
 		running:     false,
+		state:       SpinnerCompleted, // Default to completed state
 		stopChan:    make(chan bool),
 		renderer:    Dots,
 	}
@@ -115,7 +125,7 @@ func (s *Spinner) Start() {
 	go s.animate()
 }
 
-// Stop ends the spinner animation and renders the final state
+// Stop ends the spinner animation and renders the final state with success
 func (s *Spinner) Stop() {
 	s.mutex.Lock()
 	if !s.running {
@@ -124,6 +134,27 @@ func (s *Spinner) Stop() {
 	}
 
 	s.running = false
+	s.state = SpinnerCompleted
+	s.mutex.Unlock()
+
+	s.stopChan <- true
+	s.renderFinal()
+
+	if !s.frameAware.InFrame() {
+		fmt.Fprintln(s.frameAware.Output())
+	}
+}
+
+// Fail ends the spinner animation and renders the final state with failure
+func (s *Spinner) Fail() {
+	s.mutex.Lock()
+	if !s.running {
+		s.mutex.Unlock()
+		return
+	}
+
+	s.running = false
+	s.state = SpinnerFailed
 	s.mutex.Unlock()
 
 	s.stopChan <- true
@@ -174,7 +205,13 @@ func (s *Spinner) renderFinal() {
 		return
 	}
 
-	checkmark := ansi.CheckMark.Colorize(ansi.Green)
+	var icon string
+	if s.state == SpinnerFailed {
+		icon = ansi.CrossMark.Colorize(ansi.Red)
+	} else {
+		icon = ansi.CheckMark.Colorize(ansi.Green)
+	}
+
 	message := s.message
 
 	var elapsedText string
@@ -184,7 +221,7 @@ func (s *Spinner) renderFinal() {
 	}
 
 	s.frameAware.RenderFinal(func() string {
-		return fmt.Sprintf("%s %s%s", checkmark, message, elapsedText)
+		return fmt.Sprintf("%s %s%s", icon, message, elapsedText)
 	})
 }
 
@@ -275,4 +312,11 @@ func (s *Spinner) Elapsed() time.Duration {
 		return 0
 	}
 	return time.Since(s.startTime)
+}
+
+// State returns the current completion state of the spinner
+func (s *Spinner) State() SpinnerState {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.state
 }

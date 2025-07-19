@@ -246,3 +246,83 @@ func TestElapsedTimeOption(t *testing.T) {
 	require.Contains(t, output2, ansi.CheckMark.String())
 	require.NotContains(t, output2, "(") // Should not contain elapsed time
 }
+
+func TestSpinnerFailure(t *testing.T) {
+	var buf bytes.Buffer
+	s := New("test task", WithOutput(&buf))
+
+	require.False(t, s.IsRunning())
+	require.Equal(t, SpinnerCompleted, s.State()) // Default state
+
+	s.Start()
+	require.True(t, s.IsRunning())
+
+	time.Sleep(10 * time.Millisecond)
+
+	s.Fail()
+	require.False(t, s.IsRunning())
+	require.Equal(t, SpinnerFailed, s.State())
+
+	output := buf.String()
+	require.Contains(t, output, "test task")
+	require.Contains(t, output, ansi.CrossMark.String())
+	require.NotContains(t, output, ansi.CheckMark.String())
+}
+
+func TestSpinnerSuccess(t *testing.T) {
+	var buf bytes.Buffer
+	s := New("test task", WithOutput(&buf))
+
+	s.Start()
+	time.Sleep(10 * time.Millisecond)
+	s.Stop()
+
+	require.Equal(t, SpinnerCompleted, s.State())
+
+	output := buf.String()
+	require.Contains(t, output, "test task")
+	require.Contains(t, output, ansi.CheckMark.String())
+	require.NotContains(t, output, ansi.CrossMark.String())
+}
+
+func TestDoubleFailure(t *testing.T) {
+	var buf bytes.Buffer
+	s := New("test", WithOutput(&buf))
+
+	s.Start()
+	s.Fail()
+	require.False(t, s.IsRunning())
+	require.Equal(t, SpinnerFailed, s.State())
+
+	s.Fail() // Should not panic or cause issues
+	require.False(t, s.IsRunning())
+	require.Equal(t, SpinnerFailed, s.State())
+}
+
+func TestFailureWithElapsedTime(t *testing.T) {
+	var buf bytes.Buffer
+	s := New("test task", WithOutput(&buf))
+
+	s.Start()
+	time.Sleep(10 * time.Millisecond)
+	s.Fail()
+
+	output := buf.String()
+	require.Contains(t, output, "test task")
+	require.Contains(t, output, ansi.CrossMark.String())
+	require.Contains(t, output, "(") // Should contain elapsed time in parentheses
+}
+
+func TestFailureWithoutElapsedTime(t *testing.T) {
+	var buf bytes.Buffer
+	s := New("test task", WithOutput(&buf), WithShowElapsed(false))
+
+	s.Start()
+	time.Sleep(10 * time.Millisecond)
+	s.Fail()
+
+	output := buf.String()
+	require.Contains(t, output, "test task")
+	require.Contains(t, output, ansi.CrossMark.String())
+	require.NotContains(t, output, "(") // Should not contain elapsed time
+}

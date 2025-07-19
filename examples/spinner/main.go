@@ -13,6 +13,7 @@ func main() {
 	customSpinnerDemo()
 	frameIntegrationDemo()
 	multipleSpinnersDemo()
+	failureDemo()
 }
 
 func basicSpinnerDemo() {
@@ -92,4 +93,37 @@ func multipleSpinnersDemo() {
 
 	outer.Println("Deployment completed!")
 	outer.Close()
+}
+
+func failureDemo() {
+	frame := frame.Open("Error Handling Demo", frame.WithColor(ansi.Red))
+
+	// Successful task
+	s1 := spinner.New("Validating configuration...", spinner.WithOutput(frame))
+	s1.Start()
+	time.Sleep(1 * time.Second)
+	s1.Stop()
+
+	// Failed task
+	s2 := spinner.New("Connecting to database...",
+		spinner.WithOutput(frame),
+		spinner.WithColor(ansi.Yellow))
+	s2.Start()
+	time.Sleep(1500 * time.Millisecond)
+	s2.UpdateMessage("Connection timeout occurred")
+	time.Sleep(500 * time.Millisecond)
+	s2.Fail() // This will show a red crossmark instead of green checkmark
+
+	// Another failed task with elapsed time disabled
+	s3 := spinner.New("Deploying service...",
+		spinner.WithOutput(frame),
+		spinner.WithShowElapsed(false))
+	s3.Start()
+	time.Sleep(1 * time.Second)
+	s3.UpdateMessage("Permission denied")
+	time.Sleep(500 * time.Millisecond)
+	s3.Fail()
+
+	frame.Println("Some tasks failed - check logs for details")
+	frame.Close()
 }
