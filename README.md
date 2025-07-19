@@ -1,6 +1,7 @@
 # Gooey
 
 [![CI](https://github.com/pseudomuto/gooey/workflows/CI/badge.svg)](https://github.com/pseudomuto/gooey/actions)
+[![codecov](https://codecov.io/gh/pseudomuto/gooey/branch/main/graph/badge.svg)](https://codecov.io/gh/pseudomuto/gooey)
 [![Go Reference](https://pkg.go.dev/badge/github.com/pseudomuto/gooey.svg)](https://pkg.go.dev/github.com/pseudomuto/gooey)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pseudomuto/gooey)](https://goreportcard.com/report/github.com/pseudomuto/gooey)
 
