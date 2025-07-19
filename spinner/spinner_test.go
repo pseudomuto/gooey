@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	. "github.com/pseudomuto/gooey/components/spinner"
+	. "github.com/pseudomuto/gooey/spinner"
 	"github.com/stretchr/testify/require"
 )
 

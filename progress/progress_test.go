@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	. "github.com/pseudomuto/gooey/components/progress"
 	"github.com/pseudomuto/gooey/internal/term"
+	. "github.com/pseudomuto/gooey/progress"
 	"github.com/stretchr/testify/require"
 )
 

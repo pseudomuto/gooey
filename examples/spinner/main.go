@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/components/frame"
-	"github.com/pseudomuto/gooey/components/spinner"
+	"github.com/pseudomuto/gooey/frame"
+	"github.com/pseudomuto/gooey/spinner"
 )
 
 func main() {

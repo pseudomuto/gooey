@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/pseudomuto/gooey/components/frame"
-	"github.com/pseudomuto/gooey/components/spinner"
+	"github.com/pseudomuto/gooey/frame"
+	"github.com/pseudomuto/gooey/spinner"
 	"github.com/stretchr/testify/require"
 )
 

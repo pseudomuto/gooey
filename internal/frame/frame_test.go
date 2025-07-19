@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/components/frame"
+	"github.com/pseudomuto/gooey/frame"
 	"github.com/stretchr/testify/require"
 )
 

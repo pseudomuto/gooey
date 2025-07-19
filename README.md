@@ -211,7 +211,9 @@ The SpinGroup examples demonstrate:
 ### Core Packages
 
 - **`ansi`** - ANSI color codes, styles, template formatting, icons, and terminal control sequences
-- **`components`** - Reusable UI components (Frame, Progress, Spinner, SpinGroup)
+- **`frame`** - Frame component for bordered content areas with nested frame support
+- **`progress`** - Progress component for interactive progress bars with extensible renderers
+- **`spinner`** - Spinner component for animated loading indicators and sequential task management
 
 ### Design Principles
 
@@ -244,7 +246,7 @@ task lint
 go build
 
 # Run specific test
-go test ./components/frame -run TestFrameBasic
+go test ./frame -run TestFrameBasic
 
 # Tidy dependencies
 go mod tidy

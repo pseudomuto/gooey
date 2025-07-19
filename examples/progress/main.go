@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/components/frame"
-	"github.com/pseudomuto/gooey/components/progress"
+	"github.com/pseudomuto/gooey/frame"
+	"github.com/pseudomuto/gooey/progress"
 )
 
 // fancyRenderer implements a more elaborate custom renderer

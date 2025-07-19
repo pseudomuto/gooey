@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/pseudomuto/gooey/ansi"
-	"github.com/pseudomuto/gooey/components/frame"
+	"github.com/pseudomuto/gooey/frame"
 )
 
 // FrameReplacer interface allows frames to update lines in place.
