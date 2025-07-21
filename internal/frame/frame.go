@@ -1,3 +1,6 @@
+// Package frame provides frame-aware rendering utilities and integration components.
+// It centralizes frame detection logic and rendering methods used by Progress and Spinner components,
+// enabling consistent frame integration across all UI components.
 package frame
 
 import (

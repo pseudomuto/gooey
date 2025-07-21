@@ -1,3 +1,6 @@
+// Package frame provides bordered content areas with nesting support and multiple rendering styles.
+// Frames can contain other UI components and support automatic color inheritance, proper indentation,
+// and single-line updates for dynamic content like progress bars and spinners.
 package frame
 
 import (

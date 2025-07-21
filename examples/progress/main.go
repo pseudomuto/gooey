@@ -67,7 +67,7 @@ func nestedInFrame() {
 			p.Update(i, fmt.Sprintf("Step %d of %d", i, step.count))
 			time.Sleep(100 * time.Millisecond)
 		}
-		p.Complete("✓ Completed")
+		p.Complete("Completed")
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -92,7 +92,7 @@ func colorsAndWidths() {
 			p.Update(j, fmt.Sprintf("Step %d", j))
 			time.Sleep(150 * time.Millisecond)
 		}
-		p.Complete("Done!")
+		p.Complete(color.Colorize("Done!"))
 		time.Sleep(100 * time.Millisecond)
 	}
 }

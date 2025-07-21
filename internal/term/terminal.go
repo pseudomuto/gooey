@@ -1,3 +1,6 @@
+// Package term provides terminal utilities for width detection, string handling, and flexible layout systems.
+// It includes ANSI-aware string processing, multi-column layouts, and responsive design utilities used by
+// progress bars, frames, and other UI components.
 package term
 
 import (

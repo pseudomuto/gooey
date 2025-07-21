@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/pseudomuto/gooey/ansi"
 	"github.com/pseudomuto/gooey/internal/term"
 )
 
@@ -144,7 +145,14 @@ func (r *charRenderer) buildProgressSection(p *Progress, sectionWidth int) strin
 	// Build progress section with bar, percentage, and count
 	var progressSection strings.Builder
 	progressSection.WriteString("[")
-	progressSection.WriteString(p.Color().Sprint(bar.String()))
+
+	// Use red color for failed state, otherwise use configured color
+	barColor := p.Color()
+	if p.IsFailed() {
+		barColor = ansi.Red
+	}
+	progressSection.WriteString(barColor.Sprint(bar.String()))
+
 	progressSection.WriteString("]")
 	progressSection.WriteString(percentage)
 	progressSection.WriteString(count)
@@ -169,8 +177,12 @@ func (r *minimalRenderer) Render(p *Progress, w io.Writer) {
 	result.WriteString(p.title)
 	result.WriteString(": ")
 
-	// Colored percentage
-	result.WriteString(p.color.Sprintf("%.1f%%", percentage))
+	// Colored percentage (red if failed)
+	percentageColor := p.color
+	if p.IsFailed() {
+		percentageColor = ansi.Red
+	}
+	result.WriteString(percentageColor.Sprintf("%.1f%%", percentage))
 
 	// Message if provided
 	if p.message != "" {

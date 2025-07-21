@@ -2,12 +2,14 @@ package spinner_test
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/pseudomuto/gooey/ansi"
+	"github.com/pseudomuto/gooey/progress"
 	"github.com/pseudomuto/gooey/spinner"
 	"github.com/stretchr/testify/require"
 )
@@ -206,4 +208,73 @@ func TestSpinGroup_ConcurrentTaskAddition(t *testing.T) {
 
 	err := sg.Run()
 	require.NoError(t, err)
+}
+
+func TestSpinGroup_MixedComponents(t *testing.T) {
+	buf := &bytes.Buffer{}
+	sg := spinner.NewSpinGroup("Mixed Components Test", spinner.WithSpinGroupOutput(buf))
+
+	// Add indefinite task with spinner
+	sg.AddTask("Connect", spinner.New("Connecting to server..."), func() error {
+		time.Sleep(10 * time.Millisecond)
+		return nil
+	})
+
+	// Add definite task with progress
+	progressBar := progress.New("Download", 3)
+	sg.AddTask("Download", progressBar, func() error {
+		for i := 0; i <= 3; i++ {
+			progressBar.Update(i, fmt.Sprintf("Downloaded %d files", i))
+			time.Sleep(5 * time.Millisecond)
+		}
+		return nil
+	})
+
+	// Add another indefinite task
+	sg.AddTask("Cleanup", spinner.New("Cleaning up..."), func() error {
+		time.Sleep(10 * time.Millisecond)
+		return nil
+	})
+
+	err := sg.Run()
+	require.NoError(t, err)
+
+	output := buf.String()
+	require.Contains(t, output, "Connecting to server...")
+	require.Contains(t, output, "Download")
+	require.Contains(t, output, "Cleaning up...")
+	require.Contains(t, output, "✓") // Should show success indicators
+}
+
+func TestSpinGroup_MixedComponentsWithFailure(t *testing.T) {
+	buf := &bytes.Buffer{}
+	sg := spinner.NewSpinGroup("Mixed Failure Test", spinner.WithSpinGroupOutput(buf))
+
+	// Success task with spinner
+	sg.AddTask("Connect", spinner.New("Connecting..."), func() error {
+		time.Sleep(5 * time.Millisecond)
+		return nil
+	})
+
+	// Failed task with progress
+	progressBar := progress.New("Upload", 10)
+	sg.AddTask("Upload", progressBar, func() error {
+		progressBar.Update(5, "Uploading...")
+		time.Sleep(5 * time.Millisecond)
+		return errors.New("upload failed")
+	})
+
+	// This task should not execute
+	sg.AddTask("Finalize", spinner.New("Finalizing..."), func() error {
+		time.Sleep(5 * time.Millisecond)
+		return nil
+	})
+
+	err := sg.Run()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "upload failed")
+
+	output := buf.String()
+	require.Contains(t, output, "✓") // Should show success for first task
+	require.Contains(t, output, "✗") // Should show failure for failed task
 }

@@ -12,7 +12,7 @@ A Go CLI UI library inspired by [Shopify's cli-ui](https://github.com/Shopify/cl
 - **Frame Components**: Create bordered content areas with nested frame support
 - **Progress Components**: Interactive progress bars with extensible renderers, adaptive width calculation, real-time updates, and seamless frame integration
 - **Spinner Components**: Animated loading indicators with automatic color rotation (Red→Blue→Cyan→Magenta), multiple animation styles, and real-time message updates
-- **SpinGroup Components**: Coordinated execution of multiple sequential tasks with individual spinners and status tracking
+- **SpinGroup Components**: Coordinated execution of multiple sequential tasks with mixed Spinner and Progress components using the TaskComponent interface
 - **ANSI Color Support**: Rich color and styling with template-based formatting
 - **Multiple Frame Styles**: Box and bracket frame styles
 - **Automatic Formatting**: Smart content alignment and border management
@@ -56,9 +56,11 @@ See the [examples directory](./examples) for working code examples of all compon
 ### Progress Methods
 
 - `progress.New(title string, total int, options ...ProgressOption) *Progress` - Create and initialize a new progress bar
+- `progress.Start()` - Begin showing the progress bar (TaskComponent interface method)
 - `progress.Update(current int, message string)` - Update progress value and optional message
 - `progress.Increment(message string)` - Increment progress by 1 with optional message
 - `progress.Complete(message string)` - Mark progress as 100% complete with final message
+- `progress.Fail(message string)` - Mark progress as failed with error message (TaskComponent interface method)
 
 #### Progress Getters
 
@@ -95,7 +97,8 @@ Implement the `ProgressRenderer` interface for custom styling or use `RenderFunc
 - `spinner.New(message string, options ...SpinnerOption) *Spinner` - Create and initialize a new animated spinner
 - `spinner.Start()` - Start the spinner animation in a background goroutine
 - `spinner.Stop()` - Stop the spinner animation and show successful completion with green checkmark
-- `spinner.Fail()` - Stop the spinner animation and show failure with red crossmark
+- `spinner.Complete(message string)` - Complete the spinner with optional success message (TaskComponent interface method)
+- `spinner.Fail(message string)` - Stop the spinner animation and show failure with red crossmark and optional error message
 - `spinner.UpdateMessage(message string)` - Update the spinner message while running
 - `spinner.IsRunning() bool` - Check if the spinner is currently animating
 - `spinner.Message() string` - Get the current spinner message
@@ -123,10 +126,25 @@ Implement the `ProgressRenderer` interface for custom styling or use `RenderFunc
 
 Implement the `SpinnerRenderer` interface for custom animations or use `RenderFunc` for inline custom renderers.
 
+### TaskComponent Interface
+
+The TaskComponent interface enables polymorphic task management, allowing SpinGroup to work with both Spinner and Progress components:
+
+```go
+type TaskComponent interface {
+    Start()                    // Begin showing the component
+    Complete(message string)   // Mark successful completion
+    Fail(message string)       // Mark failure with error message
+    SetOutput(io.Writer)       // Redirect output for frame integration
+}
+```
+
+Both `*Spinner` and `*Progress` implement this interface, enabling mixed usage in SpinGroup.
+
 ### SpinGroup Methods
 
-- `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution using real Spinner instances
-- `spinGroup.AddTask(name string, spinner *Spinner, taskFunc func() error)` - Add a task with its associated spinner and function to the group
+- `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution using TaskComponent instances (Spinner or Progress)
+- `spinGroup.AddTask(name string, component TaskComponent, taskFunc func() error)` - Add a task with its associated component (Spinner or Progress) and function to the group
 - `spinGroup.Run() error` - Execute all tasks sequentially, returning first error encountered
 - `spinGroup.RunInFrame() error` - Execute all tasks within a frame for organized display
 - `spinGroup.TaskCount() int` - Get the number of tasks in the group
@@ -193,11 +211,14 @@ The spinner examples demonstrate:
 - Thread-safe operations and proper resource cleanup
 
 The SpinGroup examples demonstrate:
-- Sequential task execution using real Spinner instances
-- Custom spinner configurations for each task (colors, renderers, intervals)
-- Error handling with automatic failure detection and early termination
+- Sequential task execution using mixed TaskComponent instances (Spinner and Progress)
+- **Mixed Component Usage**: Combine indefinite tasks (Spinners) with definite tasks (Progress bars) in the same workflow
+- **Definite vs Indefinite Tasks**: Use Progress bars for tasks with known steps/completion and Spinners for unpredictable operations
+- Custom component configurations for each task (colors, renderers, intervals, widths)
+- Error handling with automatic failure detection, visual feedback (red ✗), and early termination
 - Frame integration for organized display with nested frames
-- Simplified API with `Run()` and `RunInFrame()` methods
+- **Success and Failure States**: Visual indicators show green checkmarks (✓) for success and red crossmarks (✗) for failures
+- Polymorphic API with `Run()` and `RunInFrame()` methods that work with any TaskComponent
 - Thread-safe task addition and execution
 
 ## Architecture
