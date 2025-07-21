@@ -125,22 +125,16 @@ Implement the `SpinnerRenderer` interface for custom animations or use `RenderFu
 
 ### SpinGroup Methods
 
-- `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution
-- `spinGroup.AddTask(name string, taskFunc func() error) int` - Add a task to the group and return its ID
-- `spinGroup.Start()` - Start executing all tasks sequentially
-- `spinGroup.Stop()` - Stop the spin group execution
-- `spinGroup.Wait()` - Wait for all tasks to complete
+- `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution using real Spinner instances
+- `spinGroup.AddTask(name string, spinner *Spinner, taskFunc func() error)` - Add a task with its associated spinner and function to the group
+- `spinGroup.Run() error` - Execute all tasks sequentially, returning first error encountered
+- `spinGroup.RunInFrame() error` - Execute all tasks within a frame for organized display
+- `spinGroup.TaskCount() int` - Get the number of tasks in the group
+- `spinGroup.Title() string` - Get the spin group title
 
 ### SpinGroup Options
 
 - `spinner.WithSpinGroupOutput(w io.Writer)` - Set custom output writer for the spin group
-
-### Task Status Types
-
-- `spinner.TaskPending` - Task has not yet started
-- `spinner.TaskRunning` - Task is currently executing
-- `spinner.TaskCompleted` - Task finished successfully
-- `spinner.TaskFailed` - Task failed with an error
 
 
 ## Examples
@@ -199,12 +193,12 @@ The spinner examples demonstrate:
 - Thread-safe operations and proper resource cleanup
 
 The SpinGroup examples demonstrate:
-- Sequential task execution with coordinated spinners
-- Task status tracking (Pending, Running, Completed, Failed)
-- Error handling and failure reporting
-- Frame integration for organized display
-- Context-based control and cancellation
-- Thread-safe operations with concurrent access
+- Sequential task execution using real Spinner instances
+- Custom spinner configurations for each task (colors, renderers, intervals)
+- Error handling with automatic failure detection and early termination
+- Frame integration for organized display with nested frames
+- Simplified API with `Run()` and `RunInFrame()` methods
+- Thread-safe task addition and execution
 
 ## Architecture
 
@@ -230,7 +224,7 @@ The SpinGroup examples demonstrate:
 
 ### Prerequisites
 
-- Go 1.24.4 or later
+- Go 1.21 or later (requires `min()` and `max()` built-in functions)
 - [Task](https://taskfile.dev/) for build automation
 
 ### Commands

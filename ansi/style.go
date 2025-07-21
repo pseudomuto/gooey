@@ -53,27 +53,47 @@ func (s Style) Apply(text string) string {
 	return fmt.Sprintf("%s%s%s", s.String(), text, StyleReset.String())
 }
 
-// BoldText applies bold formatting to text
+// BoldText applies bold formatting to text.
+//
+// Example:
+//
+//	fmt.Println(ansi.BoldText("Important message"))
 func BoldText(text string) string {
 	return Bold.Apply(text)
 }
 
-// ItalicText applies italic formatting to text
+// ItalicText applies italic formatting to text.
+//
+// Example:
+//
+//	fmt.Println(ansi.ItalicText("Emphasized text"))
 func ItalicText(text string) string {
 	return Italic.Apply(text)
 }
 
-// UnderlineText applies underline formatting to text
+// UnderlineText applies underline formatting to text.
+//
+// Example:
+//
+//	fmt.Println(ansi.UnderlineText("Underlined text"))
 func UnderlineText(text string) string {
 	return Underline.Apply(text)
 }
 
-// StrikethroughText applies strikethrough formatting to text
+// StrikethroughText applies strikethrough formatting to text.
+//
+// Example:
+//
+//	fmt.Println(ansi.StrikethroughText("Cancelled text"))
 func StrikethroughText(text string) string {
 	return Strikethrough.Apply(text)
 }
 
-// DimText applies dim formatting to text
+// DimText applies dim formatting to text.
+//
+// Example:
+//
+//	fmt.Println(ansi.DimText("Secondary information"))
 func DimText(text string) string {
 	return Dim.Apply(text)
 }

@@ -12,209 +12,219 @@ import (
 
 func main() {
 	fmt.Println(ansi.Bold.Apply("SpinGroup Examples"))
-	fmt.Println("Demonstrating dynamic task management with sequential spinners")
+	fmt.Println("Demonstrating sequential task execution with real Spinner instances")
 	fmt.Println()
 
-	// Example 1: Dynamic task addition
-	dynamicExample()
+	// Example 1: Basic usage
+	basicExample()
 	fmt.Println()
 
-	// Example 2: Real-world deployment simulation
-	deploymentExample()
+	// Example 2: Custom spinner configurations
+	customSpinnersExample()
 	fmt.Println()
 
-	// Example 3: Nested frame example
+	// Example 3: Frame integration
+	frameExample()
+	fmt.Println()
+
+	// Example 4: Nested frames
 	nestedFrameExample()
 }
 
-func dynamicExample() {
-	fmt.Println(ansi.Cyan.Colorize("1. Dynamic Task Addition"))
+func basicExample() {
+	fmt.Println(ansi.Cyan.Colorize("1. Basic SpinGroup Usage"))
 
-	sg := spinner.NewSpinGroup("Dynamic Processing")
+	sg := spinner.NewSpinGroup("Basic Tasks")
 
-	// Add initial task
-	sg.AddTask("Initializing", func() error {
-		time.Sleep(randomDuration(300, 500))
-		return nil
-	})
-
-	sg.Start()
-
-	// Add tasks dynamically while running
-	go func() {
-		time.Sleep(200 * time.Millisecond)
-		sg.AddTask("Loading module A", func() error {
-			time.Sleep(randomDuration(400, 600))
-			return nil
-		})
-
-		time.Sleep(300 * time.Millisecond)
-		sg.AddTask("Loading module B", func() error {
-			time.Sleep(randomDuration(500, 700))
-			return nil
-		})
-
-		time.Sleep(200 * time.Millisecond)
-		sg.AddTask("Starting services", func() error {
-			time.Sleep(randomDuration(600, 800))
-			return nil
-		})
-
-		time.Sleep(400 * time.Millisecond)
-		sg.AddTask("Final validation", func() error {
-			time.Sleep(randomDuration(300, 500))
-			return nil
-		})
-	}()
-
-	sg.Wait()
-	// Small delay to ensure cleanup
-	time.Sleep(50 * time.Millisecond)
-}
-
-func deploymentExample() {
-	fmt.Println(ansi.Cyan.Colorize("2. Real-world Deployment Simulation"))
-
-	f := frame.Open("Production Deployment", frame.WithColor(ansi.Green))
-
-	sg := spinner.NewSpinGroup("Deployment Pipeline",
-		spinner.WithSpinGroupOutput(f))
-
-	// Pre-deployment tasks
-	sg.AddTask("Backing up database", func() error {
-		time.Sleep(randomDuration(1000, 1500))
-		return nil
-	})
-
-	sg.AddTask("Stopping services", func() error {
-		time.Sleep(randomDuration(500, 800))
-		return nil
-	})
-
-	sg.Start()
-
-	// Add deployment tasks dynamically
-	go func() {
-		time.Sleep(600 * time.Millisecond)
-
-		sg.AddTask("Deploying application v2.1.0", func() error {
-			time.Sleep(randomDuration(1200, 1800))
-			return nil
-		})
-
-		sg.AddTask("Updating configuration", func() error {
-			time.Sleep(randomDuration(400, 600))
-			return nil
-		})
-
-		sg.AddTask("Running database migrations", func() error {
-			time.Sleep(randomDuration(800, 1200))
-			return nil
-		})
-
-		time.Sleep(800 * time.Millisecond)
-
-		sg.AddTask("Starting services", func() error {
-			time.Sleep(randomDuration(600, 900))
-			return nil
-		})
-
-		sg.AddTask("Running health checks", func() error {
-			time.Sleep(randomDuration(500, 700))
-			return nil
-		})
-
-		sg.AddTask("Warming up caches", func() error {
-			time.Sleep(randomDuration(400, 600))
-			return nil
-		})
-	}()
-
-	sg.Wait()
-	// Small delay to ensure cleanup
-	time.Sleep(50 * time.Millisecond)
-
-	f.Println("")
-	f.Println("🚀 Deployment completed successfully!")
-	f.Println("📊 Summary:")
-	fmt.Fprintf(f, "   • Total tasks: %d\n", sg.TaskCount())
-	fmt.Fprintf(f, "   • Duration: %v\n", sg.Elapsed())
-	f.Close()
-}
-
-func nestedFrameExample() {
-	fmt.Println(ansi.Cyan.Colorize("3. Nested Frame Example"))
-
-	// Outer frame for the entire application deployment
-	appFrame := frame.Open("Application Deployment", frame.WithColor(ansi.Blue))
-	appFrame.Println("  Starting complete application deployment...")
-
-	// Database migration frame
-	dbFrame := frame.Open("Database Migration", frame.WithColor(ansi.Yellow))
-	dbSg := spinner.NewSpinGroup("Migration Tasks", spinner.WithSpinGroupOutput(dbFrame))
-
-	dbSg.AddTask("Backing up current database", func() error {
+	// Add tasks with default spinners
+	sg.AddTask("Initializing", spinner.New("Starting up..."), func() error {
 		time.Sleep(randomDuration(800, 1200))
 		return nil
 	})
 
-	dbSg.AddTask("Running migration scripts", func() error {
+	sg.AddTask("Processing", spinner.New("Processing data..."), func() error {
 		time.Sleep(randomDuration(1000, 1500))
 		return nil
 	})
 
-	dbSg.AddTask("Validating schema changes", func() error {
+	sg.AddTask("Finalizing", spinner.New("Cleaning up..."), func() error {
 		time.Sleep(randomDuration(600, 900))
 		return nil
 	})
 
-	dbSg.Start()
-	dbSg.Wait()
-	// Small delay to ensure cleanup
-	time.Sleep(50 * time.Millisecond)
+	// Run all tasks sequentially
+	err := sg.Run()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+}
 
-	dbFrame.Println("✅ Database migration completed successfully!")
+func customSpinnersExample() {
+	fmt.Println(ansi.Cyan.Colorize("2. Custom Spinner Configurations"))
+
+	sg := spinner.NewSpinGroup("Custom Tasks")
+
+	// Each task can have its own spinner configuration
+	sg.AddTask("Building",
+		spinner.New("Building application...",
+			spinner.WithColor(ansi.Blue),
+			spinner.WithRenderer(spinner.Dots)),
+		func() error {
+			time.Sleep(randomDuration(1200, 1800))
+			return nil
+		})
+
+	sg.AddTask("Testing",
+		spinner.New("Running tests...",
+			spinner.WithColor(ansi.Yellow),
+			spinner.WithRenderer(spinner.Clock),
+			spinner.WithShowElapsed(true)),
+		func() error {
+			time.Sleep(randomDuration(800, 1200))
+			return nil
+		})
+
+	sg.AddTask("Deploying",
+		spinner.New("Deploying to production...",
+			spinner.WithColor(ansi.Green),
+			spinner.WithRenderer(spinner.Arrow),
+			spinner.WithInterval(200*time.Millisecond)),
+		func() error {
+			time.Sleep(randomDuration(1000, 1400))
+			return nil
+		})
+
+	err := sg.Run()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+}
+
+func frameExample() {
+	fmt.Println(ansi.Cyan.Colorize("3. Frame Integration"))
+
+	sg := spinner.NewSpinGroup("Deployment Pipeline")
+
+	// Add tasks
+	sg.AddTask("Database Migration",
+		spinner.New("Migrating database schema...",
+			spinner.WithColor(ansi.BrightBlue)),
+		func() error {
+			time.Sleep(randomDuration(1000, 1500))
+			return nil
+		})
+
+	sg.AddTask("Service Update",
+		spinner.New("Updating services...",
+			spinner.WithColor(ansi.BrightGreen)),
+		func() error {
+			time.Sleep(randomDuration(800, 1200))
+			return nil
+		})
+
+	sg.AddTask("Health Check",
+		spinner.New("Verifying system health...",
+			spinner.WithColor(ansi.BrightYellow)),
+		func() error {
+			time.Sleep(randomDuration(600, 900))
+			return nil
+		})
+
+	// Run within a frame for organized display
+	err := sg.RunInFrame()
+	if err != nil {
+		fmt.Printf("Deployment failed: %v\n", err)
+	} else {
+		fmt.Println("✅ Deployment completed successfully!")
+	}
+}
+
+func nestedFrameExample() {
+	fmt.Println(ansi.Cyan.Colorize("4. Nested Frame Example"))
+
+	// Outer frame for the entire application deployment
+	appFrame := frame.Open("Complete Application Deployment", frame.WithColor(ansi.Blue))
+	appFrame.Println("Starting comprehensive deployment process...")
+
+	// Database operations nested frame
+	dbFrame := frame.Open("Database Operations", frame.WithColor(ansi.Yellow))
+
+	dbGroup := spinner.NewSpinGroup("Database Tasks", spinner.WithSpinGroupOutput(dbFrame))
+	dbGroup.AddTask("Backup",
+		spinner.New("Creating database backup...", spinner.WithColor(ansi.BrightYellow)),
+		func() error {
+			time.Sleep(randomDuration(800, 1200))
+			return nil
+		})
+
+	dbGroup.AddTask("Migration",
+		spinner.New("Running schema migrations...", spinner.WithColor(ansi.BrightBlue)),
+		func() error {
+			time.Sleep(randomDuration(1000, 1500))
+			return nil
+		})
+
+	err := dbGroup.Run()
+	if err != nil {
+		dbFrame.Println("❌ Database operations failed: %v", err)
+		dbFrame.Close()
+		appFrame.Close()
+		return
+	}
+
+	dbFrame.Println("✅ Database operations completed successfully!")
 	dbFrame.Close()
 
-	// Application services frame
+	// Service deployment nested frame
 	serviceFrame := frame.Open("Service Deployment", frame.WithColor(ansi.Green))
-	serviceSg := spinner.NewSpinGroup("Service Tasks", spinner.WithSpinGroupOutput(serviceFrame))
 
-	serviceSg.AddTask("Building Docker images", func() error {
-		time.Sleep(randomDuration(1200, 1800))
-		return nil
-	})
+	serviceGroup := spinner.NewSpinGroup("Service Tasks", spinner.WithSpinGroupOutput(serviceFrame))
+	serviceGroup.AddTask("Build",
+		spinner.New("Building Docker images...",
+			spinner.WithColor(ansi.BrightGreen),
+			spinner.WithRenderer(spinner.Dots)),
+		func() error {
+			time.Sleep(randomDuration(1200, 1800))
+			return nil
+		})
 
-	serviceSg.AddTask("Deploying to staging", func() error {
-		time.Sleep(randomDuration(800, 1200))
-		return nil
-	})
+	serviceGroup.AddTask("Deploy",
+		spinner.New("Deploying to cluster...",
+			spinner.WithColor(ansi.BrightCyan),
+			spinner.WithRenderer(spinner.Clock)),
+		func() error {
+			time.Sleep(randomDuration(900, 1300))
+			return nil
+		})
 
-	serviceSg.AddTask("Running health checks", func() error {
-		time.Sleep(randomDuration(400, 600))
-		return nil
-	})
+	serviceGroup.AddTask("Verify",
+		spinner.New("Running health checks...",
+			spinner.WithColor(ansi.BrightMagenta),
+			spinner.WithShowElapsed(true)),
+		func() error {
+			time.Sleep(randomDuration(600, 900))
+			return nil
+		})
 
-	serviceSg.AddTask("Promoting to production", func() error {
-		time.Sleep(randomDuration(600, 800))
-		return nil
-	})
-
-	serviceSg.Start()
-	serviceSg.Wait()
-	// Small delay to ensure cleanup
-	time.Sleep(50 * time.Millisecond)
+	err = serviceGroup.Run()
+	if err != nil {
+		serviceFrame.Println("❌ Service deployment failed: %v", err)
+		serviceFrame.Close()
+		appFrame.Close()
+		return
+	}
 
 	serviceFrame.Println("✅ Service deployment completed successfully!")
 	serviceFrame.Close()
 
 	// Final status in the outer frame
 	appFrame.Println("")
+	appFrame.Divider("Deployment Summary")
 	appFrame.Println("🚀 Complete application deployment finished!")
-	appFrame.Println("📊 Summary:")
-	appFrame.Println("   • Database migration: Success")
-	appFrame.Println("   • Service deployment: Success")
-	appFrame.Println("   • Total deployment time: ~15 seconds")
+	appFrame.Println("📊 Results:")
+	appFrame.Println("   • Database Operations: Success ✅")
+	appFrame.Println("   • Service Deployment: Success ✅")
+	appFrame.Println("   • Total Tasks: %d", dbGroup.TaskCount()+serviceGroup.TaskCount())
 	appFrame.Close()
 }
 

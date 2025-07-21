@@ -157,7 +157,25 @@ type (
 	}
 )
 
-// NewIconRegistry creates a new icon registry
+// NewIconRegistry creates a new icon registry with default icon sets pre-registered.
+// The registry comes with TaskIcons, ChecklistIcons, StatusIcons, and SpinnerIcons.
+//
+// Example:
+//
+//	registry := ansi.NewIconRegistry()
+//
+//	// Add a custom icon set
+//	customIcons := &ansi.IconSet{
+//		Name: "custom",
+//		Icons: map[string]string{
+//			"rocket": "🚀",
+//			"star":   "⭐",
+//		},
+//	}
+//	registry.RegisterSet(customIcons)
+//
+//	// Use icons in formatting
+//	fmt.Println(ansi.Format("{{rocket:}} Launch successful!"))
 func NewIconRegistry() *IconRegistry {
 	registry := &IconRegistry{
 		sets: make(map[string]*IconSet),
@@ -172,7 +190,13 @@ func NewIconRegistry() *IconRegistry {
 	return registry
 }
 
-// GetTaskIcon returns a task icon by status
+// GetTaskIcon returns a task icon by status.
+// Available statuses: "pending", "running", "completed", "failed".
+//
+// Example:
+//
+//	icon := ansi.GetTaskIcon("completed")
+//	fmt.Printf("%s Task finished!\n", icon.Colorize(ansi.Green))
 func GetTaskIcon(status string) Icon {
 	if icon, exists := TaskIcons.GetIcon(status); exists {
 		return icon
@@ -180,7 +204,13 @@ func GetTaskIcon(status string) Icon {
 	return Question
 }
 
-// GetChecklistIcon returns a checklist icon by status
+// GetChecklistIcon returns a checklist icon by status.
+// Available statuses: "unchecked", "checked", "partial".
+//
+// Example:
+//
+//	icon := ansi.GetChecklistIcon("checked")
+//	fmt.Printf("%s Item completed\n", icon.Colorize(ansi.Green))
 func GetChecklistIcon(status string) Icon {
 	if icon, exists := ChecklistIcons.GetIcon(status); exists {
 		return icon
@@ -188,7 +218,13 @@ func GetChecklistIcon(status string) Icon {
 	return Question
 }
 
-// GetStatusIcon returns a status icon by status
+// GetStatusIcon returns a status icon by status.
+// Available statuses: "info", "success", "warning", "error".
+//
+// Example:
+//
+//	icon := ansi.GetStatusIcon("warning")
+//	fmt.Printf("%s Please check your configuration\n", icon.Colorize(ansi.Yellow))
 func GetStatusIcon(status string) Icon {
 	if icon, exists := StatusIcons.GetIcon(status); exists {
 		return icon
@@ -196,7 +232,13 @@ func GetStatusIcon(status string) Icon {
 	return Question
 }
 
-// GetSpinnerIcon returns a spinner icon by frame
+// GetSpinnerIcon returns a spinner icon by frame.
+// Available frames: "1", "2", "3", "4", "5", "6", "7", "8" for braille spinner animation.
+//
+// Example:
+//
+//	icon := ansi.GetSpinnerIcon("3")
+//	fmt.Printf("\r%s Loading...", icon.Colorize(ansi.Blue))
 func GetSpinnerIcon(frame string) Icon {
 	if icon, exists := SpinnerIcons.GetIcon(frame); exists {
 		return icon
