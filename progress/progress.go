@@ -269,6 +269,24 @@ func (p *Progress) Total() int {
 	return p.total
 }
 
+// SetTotal updates the total progress value. This is useful when the total
+// is not known at creation time, such as when downloading a file and the
+// size is determined from HTTP headers.
+//
+// Example:
+//
+//	p := progress.New("Download", 0) // Unknown size initially
+//	p.Start()
+//	// ... get actual file size from HTTP headers
+//	p.SetTotal(fileSize)
+//	p.Update(bytesDownloaded, "Downloading...")
+func (p *Progress) SetTotal(total int) {
+	if p.completed {
+		return
+	}
+	p.total = total
+}
+
 // IsCompleted returns true if the progress has been marked as complete.
 func (p *Progress) IsCompleted() bool {
 	return p.completed

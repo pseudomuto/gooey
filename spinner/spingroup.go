@@ -109,11 +109,16 @@ func NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup {
 //
 // Example with Progress:
 //
-//	sg.AddTask("Download", progress.New("Downloading", 100, progress.WithColor(ansi.Green)),
+//	sg.AddTask("Download", progress.New("Downloading", 0, progress.WithColor(ansi.Green)), // Unknown total initially
 //		func(p TaskComponent) error {
 //			if progress, ok := p.(*progress.Progress); ok {
-//				for i := 0; i <= 100; i++ {
-//					progress.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+//				// Simulate discovering file size from HTTP headers
+//				time.Sleep(100 * time.Millisecond)
+//				fileSize := 1024 * 1024 // 1MB
+//				progress.SetTotal(fileSize)
+//
+//				for downloaded := 0; downloaded <= fileSize; downloaded += 102400 {
+//					progress.Update(downloaded, fmt.Sprintf("Downloaded %d bytes", downloaded))
 //					time.Sleep(10 * time.Millisecond)
 //				}
 //			}

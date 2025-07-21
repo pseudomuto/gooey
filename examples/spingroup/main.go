@@ -328,15 +328,21 @@ func realWorldExample() {
 			return nil
 		})
 
-	// Build process (definite - we know the build steps)
-	buildProgress := progress.New("Build", 5,
+	// Build process (definite - but total discovered during execution)
+	buildProgress := progress.New("Build", 0, // Unknown total initially
 		progress.WithColor(ansi.Blue),
 		progress.WithRenderer(progress.Bar))
 	sg.AddTask("Build", buildProgress, func(component spinner.TaskComponent) error {
-		steps := []string{"Installing deps", "Compiling", "Running tests", "Creating artifacts", "Packaging"}
-		for i, step := range steps {
-			buildProgress.Update(i+1, step)
-			time.Sleep(300 * time.Millisecond)
+		if p, ok := component.(*progress.Progress); ok {
+			// Simulate discovering build steps dynamically (e.g., from build manifest)
+			time.Sleep(100 * time.Millisecond)
+			steps := []string{"Installing deps", "Compiling", "Running tests", "Creating artifacts", "Packaging"}
+			p.SetTotal(len(steps)) // Set total after discovering build steps
+
+			for i, step := range steps {
+				p.Update(i+1, step)
+				time.Sleep(300 * time.Millisecond)
+			}
 		}
 		return nil
 	})

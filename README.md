@@ -63,16 +63,23 @@ import (
 )
 
 func main() {
-    // Create a progress bar
-    p := progress.New("Download", 100, 
+    // Create a progress bar with unknown total initially
+    p := progress.New("Download", 0, // Total unknown at creation
         progress.WithColor(ansi.Green),
         progress.WithRenderer(progress.Bar))
     
-    // Start and update progress
     p.Start()
-    for i := 0; i <= 100; i += 10 {
-        p.Update(i, fmt.Sprintf("Downloaded %d%%", i))
-        time.Sleep(100 * time.Millisecond)
+    
+    // Simulate discovering the actual file size
+    time.Sleep(200 * time.Millisecond)
+    fileSize := 1024 * 1024 // 1MB discovered from HTTP headers
+    p.SetTotal(fileSize)
+    
+    // Now update with actual progress
+    for downloaded := 0; downloaded <= fileSize; downloaded += 102400 {
+        percentage := float64(downloaded) / float64(fileSize) * 100
+        p.Update(downloaded, fmt.Sprintf("Downloaded %.1f%% (%d bytes)", percentage, downloaded))
+        time.Sleep(50 * time.Millisecond)
     }
     p.Complete("Download finished!")
 }
@@ -188,6 +195,7 @@ See the [examples directory](./examples) for more comprehensive examples and adv
 
 - `progress.Current() int` - Get current progress value
 - `progress.Total() int` - Get total progress value
+- `progress.SetTotal(total int)` - Update the total progress value (useful when total is unknown at creation)
 - `progress.Percentage() float64` - Get completion percentage
 - `progress.IsCompleted() bool` - Check if progress is completed
 - `progress.Elapsed() time.Duration` - Get elapsed time since creation

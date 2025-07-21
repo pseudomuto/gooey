@@ -317,3 +317,44 @@ func TestProgressSetOutput(t *testing.T) {
 	require.Contains(t, output2, "Second")
 	require.NotContains(t, buf1.String(), "Second")
 }
+
+func TestProgressSetTotal(t *testing.T) {
+	var buf bytes.Buffer
+	p := New("Download", 0, WithOutput(&buf)) // Start with unknown total
+
+	// Verify initial state
+	require.Equal(t, 0, p.Total())
+	require.InDelta(t, 0.0, p.Percentage(), 0.01)
+
+	// Set the total after creation
+	p.SetTotal(100)
+	require.Equal(t, 100, p.Total())
+
+	// Update progress and verify percentage calculation works
+	p.Update(50, "Halfway")
+	require.InDelta(t, 50.0, p.Percentage(), 0.01)
+
+	// Verify we can change total again before completion
+	p.SetTotal(200)
+	require.Equal(t, 200, p.Total())
+	require.InDelta(t, 25.0, p.Percentage(), 0.01) // 50/200 = 25%
+
+	// After completion, SetTotal should be ignored
+	p.Complete("Done")
+	p.SetTotal(500)                  // Should be ignored
+	require.Equal(t, 200, p.Total()) // Should still be 200
+}
+
+func TestProgressSetTotalWithZeroTotal(t *testing.T) {
+	var buf bytes.Buffer
+	p := New("Download", 0, WithOutput(&buf))
+
+	// With zero total, percentage should be 0 even with current > 0
+	p.Update(50, "Downloaded 50 bytes")
+	require.InDelta(t, 0.0, p.Percentage(), 0.01)
+
+	// After setting total, percentage should calculate correctly
+	p.SetTotal(100)
+	p.Update(50, "Downloaded 50 bytes")
+	require.InDelta(t, 50.0, p.Percentage(), 0.01)
+}
