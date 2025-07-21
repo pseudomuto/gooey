@@ -29,7 +29,121 @@ go get github.com/pseudomuto/gooey
 
 ## Quick Start
 
-See the [examples directory](./examples) for working code examples of all components.
+### Frame Example
+
+```go
+package main
+
+import (
+    "github.com/pseudomuto/gooey/ansi"
+    "github.com/pseudomuto/gooey/frame"
+)
+
+func main() {
+    // Create a frame with custom styling
+    f := frame.Open("Deployment Status", frame.WithColor(ansi.Blue))
+    f.Println("Starting deployment process...")
+    f.Divider("Progress")
+    f.Println("✅ Database migration completed")
+    f.Println("✅ Services deployed successfully")
+    f.Close() // Shows total elapsed time
+}
+```
+
+### Progress Bar Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    "github.com/pseudomuto/gooey/ansi"
+    "github.com/pseudomuto/gooey/progress"
+)
+
+func main() {
+    // Create a progress bar
+    p := progress.New("Download", 100, 
+        progress.WithColor(ansi.Green),
+        progress.WithRenderer(progress.Bar))
+    
+    // Start and update progress
+    p.Start()
+    for i := 0; i <= 100; i += 10 {
+        p.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+        time.Sleep(100 * time.Millisecond)
+    }
+    p.Complete("Download finished!")
+}
+```
+
+### Spinner Example
+
+```go
+package main
+
+import (
+    "time"
+    "github.com/pseudomuto/gooey/ansi"
+    "github.com/pseudomuto/gooey/spinner"
+)
+
+func main() {
+    // Create an animated spinner
+    s := spinner.New("Connecting to server...",
+        spinner.WithColor(ansi.Yellow),
+        spinner.WithRenderer(spinner.Dots))
+    
+    // Start animation and simulate work
+    s.Start()
+    time.Sleep(3 * time.Second)
+    s.UpdateMessage("Authentication successful")
+    time.Sleep(1 * time.Second)
+    s.Stop() // Shows green checkmark
+}
+```
+
+### SpinGroup Example (Mixed Components)
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+    "github.com/pseudomuto/gooey/ansi"
+    "github.com/pseudomuto/gooey/progress"
+    "github.com/pseudomuto/gooey/spinner"
+)
+
+func main() {
+    sg := spinner.NewSpinGroup("Deployment Pipeline")
+    
+    // Add indefinite task with spinner
+    sg.AddTask("Connect", 
+        spinner.New("Connecting to server..."), 
+        func() error {
+            time.Sleep(2 * time.Second)
+            return nil
+        })
+    
+    // Add definite task with progress bar
+    downloadProgress := progress.New("Download", 50)
+    sg.AddTask("Download", downloadProgress, func() error {
+        for i := 0; i <= 50; i += 5 {
+            downloadProgress.Update(i, fmt.Sprintf("Downloaded %d files", i))
+            time.Sleep(100 * time.Millisecond)
+        }
+        return nil
+    })
+    
+    // Run all tasks in a frame
+    sg.RunInFrame()
+}
+```
+
+See the [examples directory](./examples) for more comprehensive examples and advanced usage patterns.
 
 ## API Reference
 
