@@ -1,3 +1,6 @@
+// Package ansi provides ANSI terminal formatting capabilities including colors, styles, icons, and template-based formatting.
+// It serves as the foundation for all terminal text formatting in the gooey CLI UI library, offering both low-level
+// escape codes and high-level template processing for rich terminal output.
 package ansi
 
 import "fmt"

@@ -266,3 +266,54 @@ func TestProgressMinimalRendering(t *testing.T) {
 	require.NotContains(t, output, "█")
 	require.NotContains(t, output, "[")
 }
+
+func TestProgressTaskComponentInterface(t *testing.T) {
+	var buf bytes.Buffer
+	p := New("Upload", 10, WithOutput(&buf))
+
+	// Test Start method (no-op for Progress)
+	p.Start() // Should not panic or cause issues
+
+	// Test normal progress updates
+	p.Update(5, "Halfway")
+	require.False(t, p.IsFailed())
+	require.False(t, p.IsCompleted())
+
+	// Test Fail method
+	p.Fail("Failed")
+	require.True(t, p.IsFailed())
+	require.True(t, p.IsCompleted()) // Failed also means completed (no more updates)
+
+	output := buf.String()
+	require.Contains(t, output, "Failed")
+}
+
+func TestProgressFailRendering(t *testing.T) {
+	var buf bytes.Buffer
+	p := New("Test", 100, WithColor(ansi.Green), WithOutput(&buf))
+
+	p.Update(50, "In progress")
+	p.Fail("Error")
+
+	output := buf.String()
+	require.Contains(t, output, "Error")
+	// Should contain red color for failed state (overriding green)
+	require.Contains(t, output, ansi.Red.String())
+}
+
+func TestProgressSetOutput(t *testing.T) {
+	var buf1, buf2 bytes.Buffer
+	p := New("Test", 100, WithOutput(&buf1))
+
+	p.Update(25, "First")
+	output1 := buf1.String()
+	require.Contains(t, output1, "First")
+
+	// Change output
+	p.SetOutput(&buf2)
+	p.Update(75, "Second")
+
+	output2 := buf2.String()
+	require.Contains(t, output2, "Second")
+	require.NotContains(t, buf1.String(), "Second")
+}

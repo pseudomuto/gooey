@@ -22,40 +22,54 @@ type (
 		startTime time.Time
 	}
 
-	// SpinGroupTask represents a single task with its spinner and function
+	// SpinGroupTask represents a single task with its component and function
 	SpinGroupTask struct {
-		name     string
-		spinner  *Spinner
-		taskFunc func() error
+		name      string
+		component TaskComponent
+		taskFunc  func() error
 	}
 
 	// SpinGroupOption is a function type for configuring spin groups
 	SpinGroupOption func(*SpinGroup)
 )
 
-// NewSpinGroup creates a new spin group for managing sequential tasks with individual spinners.
-// Each task uses a real Spinner instance, making the implementation much simpler and more consistent.
+// NewSpinGroup creates a new spin group for managing sequential tasks with TaskComponents.
+// Each task can use either a Spinner (for indefinite tasks) or Progress (for definite tasks),
+// providing flexible visual feedback that matches the task characteristics.
 //
-// Example:
+// Example with Spinners:
 //
-//	// Create a spin group
 //	sg := spinner.NewSpinGroup("Deployment Tasks")
 //
-//	// Add tasks with their own spinners
-//	sg.AddTask("Building application", spinner.New("Building..."), func() error {
-//		time.Sleep(2 * time.Second)
-//		return nil
+//	// Indefinite tasks with spinners
+//	sg.AddTask("Building", spinner.New("Building application..."), func() error {
+//		return buildApp()
 //	})
 //
-//	sg.AddTask("Running tests", spinner.New("Testing..."), func() error {
-//		time.Sleep(3 * time.Second)
-//		return nil
+// Example with Mixed Components:
+//
+//	// Mix indefinite and definite tasks in the same workflow
+//	sg.AddTask("Connect", spinner.New("Connecting to server..."), func() error {
+//		return establishConnection() // Indefinite duration
+//	})
+//
+//	downloadProgress := progress.New("Download", 100)
+//	sg.AddTask("Download", downloadProgress, func() error {
+//		for i := 0; i <= 100; i += 10 {
+//			downloadProgress.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+//			time.Sleep(50 * time.Millisecond)
+//		}
+//		return nil // Definite duration with known steps
+//	})
+//
+//	sg.AddTask("Process", spinner.New("Processing data..."), func() error {
+//		return processFiles() // Indefinite duration
 //	})
 //
 //	// Run all tasks sequentially
 //	sg.Run()
 //
-// Each task gets its own fully-configured Spinner instance with custom colors,
+// Each task gets its own fully-configured component with custom colors,
 // renderers, intervals, and other options.
 func NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup {
 	sg := &SpinGroup{
@@ -71,32 +85,42 @@ func NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup {
 	return sg
 }
 
-// AddTask adds a new task to the spin group with its associated spinner and task function.
-// The spinner will be used to show progress while the task function executes.
+// AddTask adds a new task to the spin group with its associated component and task function.
+// The component can be either a Spinner (for indefinite tasks) or Progress (for definite tasks).
 //
-// Example:
+// Example with Spinner:
 //
 //	// Custom spinner with specific options
 //	s := spinner.New("Compiling...",
 //		spinner.WithColor(ansi.Blue),
 //		spinner.WithRenderer(spinner.Dots))
-//
 //	sg.AddTask("Compile", s, func() error {
-//		// Your task logic here
 //		return buildProject()
 //	})
-func (sg *SpinGroup) AddTask(name string, spinner *Spinner, taskFunc func() error) {
+//
+// Example with Progress:
+//
+//	// Progress bar for definite task
+//	p := progress.New("Downloading", 100, progress.WithColor(ansi.Green))
+//	sg.AddTask("Download", p, func() error {
+//		for i := 0; i <= 100; i++ {
+//			p.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+//			time.Sleep(10 * time.Millisecond)
+//		}
+//		return nil
+//	})
+func (sg *SpinGroup) AddTask(name string, component TaskComponent, taskFunc func() error) {
 	sg.mutex.Lock()
 	defer sg.mutex.Unlock()
 
 	sg.tasks = append(sg.tasks, SpinGroupTask{
-		name:     name,
-		spinner:  spinner,
-		taskFunc: taskFunc,
+		name:      name,
+		component: component,
+		taskFunc:  taskFunc,
 	})
 }
 
-// Run executes all tasks sequentially, using each task's associated spinner.
+// Run executes all tasks sequentially, using each task's associated component.
 // If any task fails, execution stops and the error is returned.
 func (sg *SpinGroup) Run() error {
 	sg.mutex.Lock()
@@ -111,21 +135,21 @@ func (sg *SpinGroup) Run() error {
 	}()
 
 	for _, task := range sg.tasks {
-		// Set spinner output to match SpinGroup output
-		task.spinner.frameAware.SetOutput(sg.output)
+		// Set component output to match SpinGroup output
+		task.component.SetOutput(sg.output)
 
-		// Start the spinner
-		task.spinner.Start()
+		// Start the component (spinners animate, progress shows)
+		task.component.Start()
 
 		// Execute the task
 		err := task.taskFunc()
 
-		// Stop the spinner with appropriate status
+		// Complete the component with appropriate status
 		if err != nil {
-			task.spinner.Fail()
+			task.component.Fail(err.Error())
 			return err
 		} else {
-			task.spinner.Stop()
+			task.component.Complete("")
 		}
 	}
 

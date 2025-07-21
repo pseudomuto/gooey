@@ -1,3 +1,6 @@
+// Package spinner provides animated loading indicators with automatic color rotation and frame integration.
+// Spinners support customizable animation styles, completion states (success/failure), and sequential task
+// management via SpinGroup. They implement the TaskComponent interface for mixed component workflows.
 package spinner
 
 import (
@@ -145,8 +148,20 @@ func (s *Spinner) Stop() {
 	}
 }
 
-// Fail ends the spinner animation and renders the final state with failure
-func (s *Spinner) Fail() {
+// Fail ends the spinner animation and renders the final state with failure.
+// If a message is provided, it will update the spinner message before showing the failure state.
+//
+// Example:
+//
+//	s := spinner.New("Connecting...")
+//	s.Start()
+//	if err := connect(); err != nil {
+//		s.Fail("Connection failed: " + err.Error())
+//	}
+func (s *Spinner) Fail(message string) {
+	if message != "" {
+		s.UpdateMessage(message)
+	}
 	s.mutex.Lock()
 	if !s.running {
 		s.mutex.Unlock()
@@ -170,6 +185,34 @@ func (s *Spinner) UpdateMessage(message string) {
 	s.mutex.Lock()
 	s.message = message
 	s.mutex.Unlock()
+}
+
+// Complete ends the spinner animation and renders the final state with success.
+// This is an alias for Stop() provided for TaskComponent interface compatibility.
+//
+// Example:
+//
+//	s := spinner.New("Processing...")
+//	s.Start()
+//	// ... do work ...
+//	s.Complete("Processing finished!")
+func (s *Spinner) Complete(message string) {
+	if message != "" {
+		s.UpdateMessage(message)
+	}
+	s.Stop()
+}
+
+// SetOutput sets the output writer for the spinner, allowing redirection
+// for frame integration or custom output destinations.
+//
+// Example:
+//
+//	var buf bytes.Buffer
+//	s := spinner.New("Loading...")
+//	s.SetOutput(&buf) // Redirect to buffer
+func (s *Spinner) SetOutput(output io.Writer) {
+	s.frameAware.SetOutput(output)
 }
 
 func (s *Spinner) animate() {

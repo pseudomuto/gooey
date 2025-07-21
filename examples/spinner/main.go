@@ -112,7 +112,7 @@ func failureDemo() {
 	time.Sleep(1500 * time.Millisecond)
 	s2.UpdateMessage("Connection timeout occurred")
 	time.Sleep(500 * time.Millisecond)
-	s2.Fail() // This will show a red crossmark instead of green checkmark
+	s2.Fail("") // This will show a red crossmark instead of green checkmark
 
 	// Another failed task with elapsed time disabled
 	s3 := spinner.New("Deploying service...",
@@ -122,7 +122,7 @@ func failureDemo() {
 	time.Sleep(1 * time.Second)
 	s3.UpdateMessage("Permission denied")
 	time.Sleep(500 * time.Millisecond)
-	s3.Fail()
+	s3.Fail("")
 
 	frame.Println("Some tasks failed - check logs for details")
 	frame.Close()

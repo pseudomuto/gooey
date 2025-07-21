@@ -259,7 +259,7 @@ func TestSpinnerFailure(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	s.Fail()
+	s.Fail("")
 	require.False(t, s.IsRunning())
 	require.Equal(t, SpinnerFailed, s.State())
 
@@ -290,11 +290,11 @@ func TestDoubleFailure(t *testing.T) {
 	s := New("test", WithOutput(&buf))
 
 	s.Start()
-	s.Fail()
+	s.Fail("")
 	require.False(t, s.IsRunning())
 	require.Equal(t, SpinnerFailed, s.State())
 
-	s.Fail() // Should not panic or cause issues
+	s.Fail("") // Should not panic or cause issues
 	require.False(t, s.IsRunning())
 	require.Equal(t, SpinnerFailed, s.State())
 }
@@ -305,7 +305,7 @@ func TestFailureWithElapsedTime(t *testing.T) {
 
 	s.Start()
 	time.Sleep(10 * time.Millisecond)
-	s.Fail()
+	s.Fail("")
 
 	output := buf.String()
 	require.Contains(t, output, "test task")
@@ -319,7 +319,7 @@ func TestFailureWithoutElapsedTime(t *testing.T) {
 
 	s.Start()
 	time.Sleep(10 * time.Millisecond)
-	s.Fail()
+	s.Fail("")
 
 	output := buf.String()
 	require.Contains(t, output, "test task")

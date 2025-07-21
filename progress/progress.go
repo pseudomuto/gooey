@@ -1,3 +1,6 @@
+// Package progress provides interactive progress bars with extensible renderers and frame integration.
+// Progress bars support real-time updates, completion states, and customizable visual styles. They implement
+// the TaskComponent interface for seamless integration with SpinGroup workflows.
 package progress
 
 import (
@@ -29,6 +32,7 @@ type (
 		startTime              time.Time
 		message                string
 		completed              bool
+		failed                 bool    // tracks if progress ended in failure
 		lastRenderedPercentage float64 // tracks last rendered percentage for frame mode
 		renderer               ProgressRenderer
 	}
@@ -70,7 +74,6 @@ func New(title string, total int, options ...ProgressOption) *Progress {
 		option(p)
 	}
 
-	p.render()
 	return p
 }
 
@@ -118,15 +121,79 @@ func (p *Progress) Complete(message string) {
 	}
 
 	p.current = p.total
-	p.message = message
+	if message != "" {
+		p.message = message
+	}
 	p.completed = true
 	p.render()
 
-	// Add a newline after completion to move to next line, but only if not in a frame
-	// (frames handle their own line breaks)
+	// Show success symbol and add newline
+	p.frameAware.RenderFinal(func() string {
+		return fmt.Sprintf("%s %s", ansi.CheckMark.Colorize(ansi.Green), p.message)
+	})
+
+	// Add newline if not in frame
 	if !p.frameAware.InFrame() {
-		fmt.Fprintln(p.frameAware.Output())
+		fmt.Fprint(p.frameAware.Output(), "\n")
 	}
+}
+
+// Start begins showing the progress bar. This renders the initial state of the progress bar.
+// This method is provided for TaskComponent interface compatibility and matches the
+// behavior of Spinner components.
+//
+// Example:
+//
+//	p := progress.New("Upload", 100)
+//	p.Start() // Shows the initial progress bar
+func (p *Progress) Start() {
+	p.render()
+}
+
+// Fail marks the progress as failed with an error message. The progress bar will
+// show an error state (typically with red coloring) and the provided message.
+// After calling Fail, further Update/Increment/Complete calls will be ignored.
+//
+// Example:
+//
+//	p := progress.New("Upload", 100)
+//	p.Update(50, "Uploading...")
+//	if err := uploadFiles(); err != nil {
+//		p.Fail("Upload failed: " + err.Error())
+//	}
+func (p *Progress) Fail(message string) {
+	if p.completed || p.failed {
+		return
+	}
+
+	if message != "" {
+		p.message = message
+	}
+	p.failed = true
+	p.completed = true // Prevent further updates
+	p.render()
+
+	// Show failure symbol and add newline
+	p.frameAware.RenderFinal(func() string {
+		return fmt.Sprintf("%s %s", ansi.CrossMark.Colorize(ansi.Red), p.message)
+	})
+
+	// Add newline if not in frame
+	if !p.frameAware.InFrame() {
+		fmt.Fprint(p.frameAware.Output(), "\n")
+	}
+}
+
+// SetOutput sets the output writer for the progress bar, allowing redirection
+// for frame integration or custom output destinations.
+//
+// Example:
+//
+//	var buf bytes.Buffer
+//	p := progress.New("Task", 100)
+//	p.SetOutput(&buf) // Redirect to buffer
+func (p *Progress) SetOutput(output io.Writer) {
+	p.frameAware.SetOutput(output)
 }
 
 // render draws the current progress bar state to the output writer.
@@ -205,6 +272,11 @@ func (p *Progress) Total() int {
 // IsCompleted returns true if the progress has been marked as complete.
 func (p *Progress) IsCompleted() bool {
 	return p.completed
+}
+
+// IsFailed returns true if the progress has been marked as failed.
+func (p *Progress) IsFailed() bool {
+	return p.failed
 }
 
 // Percentage returns the current completion percentage as a float64.
