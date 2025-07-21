@@ -115,10 +115,10 @@ jobs:
 
       - name: Test build examples
         run: |
-          go build -v ./examples/frame
-          go build -v ./examples/progress
-          go build -v ./examples/spinner
-          go build -v ./examples/spingroup
+          go build -o frame_example -v ./examples/frame
+          go build -o progress_example -v ./examples/progress
+          go build -o spinner_example -v ./examples/spinner
+          go build -o spingroup_example -v ./examples/spingroup
 
   compatibility:
     name: Go Compatibility
