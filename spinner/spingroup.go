@@ -26,7 +26,7 @@ type (
 	SpinGroupTask struct {
 		name      string
 		component TaskComponent
-		taskFunc  func() error
+		taskFunc  func(TaskComponent) error
 	}
 
 	// SpinGroupOption is a function type for configuring spin groups
@@ -49,22 +49,27 @@ type (
 // Example with Mixed Components:
 //
 //	// Mix indefinite and definite tasks in the same workflow
-//	sg.AddTask("Connect", spinner.New("Connecting to server..."), func() error {
-//		return establishConnection() // Indefinite duration
-//	})
+//	sg.AddTask("Connect", spinner.New("Connecting to server..."),
+//		func(component TaskComponent) error {
+//			// Component is passed to task function for dynamic updates
+//			if s, ok := component.(*spinner.Spinner); ok {
+//				s.UpdateMessage("Establishing connection...")
+//				time.Sleep(1 * time.Second)
+//				s.UpdateMessage("Authentication successful")
+//			}
+//			return nil
+//		})
 //
-//	downloadProgress := progress.New("Download", 100)
-//	sg.AddTask("Download", downloadProgress, func() error {
-//		for i := 0; i <= 100; i += 10 {
-//			downloadProgress.Update(i, fmt.Sprintf("Downloaded %d%%", i))
-//			time.Sleep(50 * time.Millisecond)
-//		}
-//		return nil // Definite duration with known steps
-//	})
-//
-//	sg.AddTask("Process", spinner.New("Processing data..."), func() error {
-//		return processFiles() // Indefinite duration
-//	})
+//	sg.AddTask("Download", progress.New("Download", 100),
+//		func(component TaskComponent) error {
+//			if p, ok := component.(*progress.Progress); ok {
+//				for i := 0; i <= 100; i += 10 {
+//					p.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+//					time.Sleep(50 * time.Millisecond)
+//				}
+//			}
+//			return nil
+//		})
 //
 //	// Run all tasks sequentially
 //	sg.Run()
@@ -87,29 +92,34 @@ func NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup {
 
 // AddTask adds a new task to the spin group with its associated component and task function.
 // The component can be either a Spinner (for indefinite tasks) or Progress (for definite tasks).
+// The task function receives the component as an argument, allowing for dynamic updates during execution.
 //
 // Example with Spinner:
 //
-//	// Custom spinner with specific options
-//	s := spinner.New("Compiling...",
-//		spinner.WithColor(ansi.Blue),
-//		spinner.WithRenderer(spinner.Dots))
-//	sg.AddTask("Compile", s, func() error {
-//		return buildProject()
-//	})
+//	sg.AddTask("Compile", spinner.New("Compiling...", spinner.WithColor(ansi.Blue)),
+//		func(s TaskComponent) error {
+//			if spinner, ok := s.(*spinner.Spinner); ok {
+//				spinner.UpdateMessage("Compiling source files...")
+//				time.Sleep(2 * time.Second)
+//				spinner.UpdateMessage("Linking binaries...")
+//				time.Sleep(1 * time.Second)
+//			}
+//			return nil
+//		})
 //
 // Example with Progress:
 //
-//	// Progress bar for definite task
-//	p := progress.New("Downloading", 100, progress.WithColor(ansi.Green))
-//	sg.AddTask("Download", p, func() error {
-//		for i := 0; i <= 100; i++ {
-//			p.Update(i, fmt.Sprintf("Downloaded %d%%", i))
-//			time.Sleep(10 * time.Millisecond)
-//		}
-//		return nil
-//	})
-func (sg *SpinGroup) AddTask(name string, component TaskComponent, taskFunc func() error) {
+//	sg.AddTask("Download", progress.New("Downloading", 100, progress.WithColor(ansi.Green)),
+//		func(p TaskComponent) error {
+//			if progress, ok := p.(*progress.Progress); ok {
+//				for i := 0; i <= 100; i++ {
+//					progress.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+//					time.Sleep(10 * time.Millisecond)
+//				}
+//			}
+//			return nil
+//		})
+func (sg *SpinGroup) AddTask(name string, component TaskComponent, taskFunc func(TaskComponent) error) {
 	sg.mutex.Lock()
 	defer sg.mutex.Unlock()
 
@@ -141,8 +151,8 @@ func (sg *SpinGroup) Run() error {
 		// Start the component (spinners animate, progress shows)
 		task.component.Start()
 
-		// Execute the task
-		err := task.taskFunc()
+		// Execute the task, passing the component for dynamic updates
+		err := task.taskFunc(task.component)
 
 		// Complete the component with appropriate status
 		if err != nil {

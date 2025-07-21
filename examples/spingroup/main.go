@@ -51,17 +51,17 @@ func basicExample() {
 	sg := spinner.NewSpinGroup("Basic Tasks")
 
 	// Add tasks with default spinners
-	sg.AddTask("Initializing", spinner.New("Starting up..."), func() error {
+	sg.AddTask("Initializing", spinner.New("Starting up..."), func(component spinner.TaskComponent) error {
 		time.Sleep(randomDuration(800, 1200))
 		return nil
 	})
 
-	sg.AddTask("Processing", spinner.New("Processing data..."), func() error {
+	sg.AddTask("Processing", spinner.New("Processing data..."), func(component spinner.TaskComponent) error {
 		time.Sleep(randomDuration(1000, 1500))
 		return nil
 	})
 
-	sg.AddTask("Finalizing", spinner.New("Cleaning up..."), func() error {
+	sg.AddTask("Finalizing", spinner.New("Cleaning up..."), func(component spinner.TaskComponent) error {
 		time.Sleep(randomDuration(600, 900))
 		return nil
 	})
@@ -83,7 +83,7 @@ func customSpinnersExample() {
 		spinner.New("Building application...",
 			spinner.WithColor(ansi.Blue),
 			spinner.WithRenderer(spinner.Dots)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1200, 1800))
 			return nil
 		})
@@ -93,7 +93,7 @@ func customSpinnersExample() {
 			spinner.WithColor(ansi.Yellow),
 			spinner.WithRenderer(spinner.Clock),
 			spinner.WithShowElapsed(true)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(800, 1200))
 			return nil
 		})
@@ -103,7 +103,7 @@ func customSpinnersExample() {
 			spinner.WithColor(ansi.Green),
 			spinner.WithRenderer(spinner.Arrow),
 			spinner.WithInterval(200*time.Millisecond)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1000, 1400))
 			return nil
 		})
@@ -123,7 +123,7 @@ func frameExample() {
 	sg.AddTask("Database Migration",
 		spinner.New("Migrating database schema...",
 			spinner.WithColor(ansi.BrightBlue)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1000, 1500))
 			return nil
 		})
@@ -131,7 +131,7 @@ func frameExample() {
 	sg.AddTask("Service Update",
 		spinner.New("Updating services...",
 			spinner.WithColor(ansi.BrightGreen)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(800, 1200))
 			return nil
 		})
@@ -139,7 +139,7 @@ func frameExample() {
 	sg.AddTask("Health Check",
 		spinner.New("Verifying system health...",
 			spinner.WithColor(ansi.BrightYellow)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(600, 900))
 			return nil
 		})
@@ -166,14 +166,14 @@ func nestedFrameExample() {
 	dbGroup := spinner.NewSpinGroup("Database Tasks", spinner.WithSpinGroupOutput(dbFrame))
 	dbGroup.AddTask("Backup",
 		spinner.New("Creating database backup...", spinner.WithColor(ansi.BrightYellow)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(800, 1200))
 			return nil
 		})
 
 	dbGroup.AddTask("Migration",
 		spinner.New("Running schema migrations...", spinner.WithColor(ansi.BrightBlue)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1000, 1500))
 			return nil
 		})
@@ -197,7 +197,7 @@ func nestedFrameExample() {
 		spinner.New("Building Docker images...",
 			spinner.WithColor(ansi.BrightGreen),
 			spinner.WithRenderer(spinner.Dots)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1200, 1800))
 			return nil
 		})
@@ -206,7 +206,7 @@ func nestedFrameExample() {
 		spinner.New("Deploying to cluster...",
 			spinner.WithColor(ansi.BrightCyan),
 			spinner.WithRenderer(spinner.Clock)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(900, 1300))
 			return nil
 		})
@@ -215,7 +215,7 @@ func nestedFrameExample() {
 		spinner.New("Running health checks...",
 			spinner.WithColor(ansi.BrightMagenta),
 			spinner.WithShowElapsed(true)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(600, 900))
 			return nil
 		})
@@ -250,8 +250,15 @@ func mixedComponentsExample() {
 	// Indefinite task with spinner (connection has no known duration)
 	sg.AddTask("Connect",
 		spinner.New("Connecting to server...", spinner.WithColor(ansi.Yellow)),
-		func() error {
-			time.Sleep(randomDuration(800, 1200))
+		func(component spinner.TaskComponent) error {
+			// Demonstrate updating spinner messages dynamically
+			if s, ok := component.(*spinner.Spinner); ok {
+				time.Sleep(randomDuration(300, 500))
+				s.UpdateMessage("Authenticating...")
+				time.Sleep(randomDuration(300, 500))
+				s.UpdateMessage("Connection established")
+				time.Sleep(randomDuration(200, 400))
+			}
 			return nil
 		})
 
@@ -259,10 +266,13 @@ func mixedComponentsExample() {
 	downloadProgress := progress.New("Download", 100,
 		progress.WithColor(ansi.Green),
 		progress.WithRenderer(progress.Bar))
-	sg.AddTask("Download", downloadProgress, func() error {
-		for i := 0; i <= 100; i += 10 {
-			downloadProgress.Update(i, fmt.Sprintf("Downloaded %d%%", i))
-			time.Sleep(50 * time.Millisecond)
+	sg.AddTask("Download", downloadProgress, func(component spinner.TaskComponent) error {
+		// Demonstrate using the component parameter for progress updates
+		if p, ok := component.(*progress.Progress); ok {
+			for i := 0; i <= 100; i += 10 {
+				p.Update(i, fmt.Sprintf("Downloaded %d%%", i))
+				time.Sleep(50 * time.Millisecond)
+			}
 		}
 		return nil
 	})
@@ -272,7 +282,7 @@ func mixedComponentsExample() {
 		spinner.New("Processing files...",
 			spinner.WithColor(ansi.Blue),
 			spinner.WithRenderer(spinner.Dots)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1000, 1500))
 			return nil
 		})
@@ -281,7 +291,7 @@ func mixedComponentsExample() {
 	uploadProgress := progress.New("Upload", 50,
 		progress.WithColor(ansi.Magenta),
 		progress.WithRenderer(progress.Dots))
-	sg.AddTask("Upload", uploadProgress, func() error {
+	sg.AddTask("Upload", uploadProgress, func(component spinner.TaskComponent) error {
 		for i := 0; i <= 50; i += 5 {
 			uploadProgress.Update(i, fmt.Sprintf("Uploading... %d files", i))
 			time.Sleep(80 * time.Millisecond)
@@ -292,7 +302,7 @@ func mixedComponentsExample() {
 	// Final indefinite task with spinner
 	sg.AddTask("Cleanup",
 		spinner.New("Cleaning up temporary files...", spinner.WithColor(ansi.Cyan)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(600, 800))
 			return nil
 		})
@@ -313,7 +323,7 @@ func realWorldExample() {
 		spinner.New("Validating configuration...",
 			spinner.WithColor(ansi.Yellow),
 			spinner.WithRenderer(spinner.Clock)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(800, 1200))
 			return nil
 		})
@@ -322,7 +332,7 @@ func realWorldExample() {
 	buildProgress := progress.New("Build", 5,
 		progress.WithColor(ansi.Blue),
 		progress.WithRenderer(progress.Bar))
-	sg.AddTask("Build", buildProgress, func() error {
+	sg.AddTask("Build", buildProgress, func(component spinner.TaskComponent) error {
 		steps := []string{"Installing deps", "Compiling", "Running tests", "Creating artifacts", "Packaging"}
 		for i, step := range steps {
 			buildProgress.Update(i+1, step)
@@ -335,7 +345,7 @@ func realWorldExample() {
 	migrationProgress := progress.New("Migrate", 12,
 		progress.WithColor(ansi.Green),
 		progress.WithRenderer(progress.Minimal))
-	sg.AddTask("Migrate", migrationProgress, func() error {
+	sg.AddTask("Migrate", migrationProgress, func(component spinner.TaskComponent) error {
 		for i := 0; i <= 12; i++ {
 			migrationProgress.Update(i, fmt.Sprintf("Applied migration %d", i))
 			time.Sleep(100 * time.Millisecond)
@@ -348,7 +358,7 @@ func realWorldExample() {
 		spinner.New("Deploying to production...",
 			spinner.WithColor(ansi.Red),
 			spinner.WithRenderer(spinner.Arrow)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1500, 2000))
 			return nil
 		})
@@ -358,7 +368,7 @@ func realWorldExample() {
 		spinner.New("Waiting for service to be healthy...",
 			spinner.WithColor(ansi.Green),
 			spinner.WithShowElapsed(true)),
-		func() error {
+		func(component spinner.TaskComponent) error {
 			time.Sleep(randomDuration(1000, 1500))
 			return nil
 		})
@@ -387,7 +397,7 @@ func progressFailureExample() {
 	successProgress := progress.New("Successful Task", 10,
 		progress.WithColor(ansi.Green),
 		progress.WithRenderer(progress.Bar))
-	sg.AddTask("Success", successProgress, func() error {
+	sg.AddTask("Success", successProgress, func(component spinner.TaskComponent) error {
 		for i := 0; i <= 10; i++ {
 			successProgress.Update(i, fmt.Sprintf("Processing step %d/10", i))
 			time.Sleep(100 * time.Millisecond)
@@ -399,7 +409,7 @@ func progressFailureExample() {
 	failureProgress := progress.New("Task That Fails", 20,
 		progress.WithColor(ansi.Yellow),
 		progress.WithRenderer(progress.Bar))
-	sg.AddTask("Failure", failureProgress, func() error {
+	sg.AddTask("Failure", failureProgress, func(component spinner.TaskComponent) error {
 		for i := 0; i <= 12; i++ {
 			failureProgress.Update(i, fmt.Sprintf("Processing item %d/20", i))
 			time.Sleep(80 * time.Millisecond)
@@ -415,7 +425,7 @@ func progressFailureExample() {
 	neverRunProgress := progress.New("Never Executed", 5,
 		progress.WithColor(ansi.Blue),
 		progress.WithRenderer(progress.Dots))
-	sg.AddTask("Skipped", neverRunProgress, func() error {
+	sg.AddTask("Skipped", neverRunProgress, func(component spinner.TaskComponent) error {
 		for i := 0; i <= 5; i++ {
 			neverRunProgress.Update(i, fmt.Sprintf("Step %d", i))
 			time.Sleep(100 * time.Millisecond)

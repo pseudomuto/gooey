@@ -123,20 +123,28 @@ func main() {
     // Add indefinite task with spinner
     sg.AddTask("Connect", 
         spinner.New("Connecting to server..."), 
-        func() error {
-            time.Sleep(2 * time.Second)
+        func(component spinner.TaskComponent) error {
+            // Access spinner for dynamic updates
+            if s, ok := component.(*spinner.Spinner); ok {
+                time.Sleep(1 * time.Second)
+                s.UpdateMessage("Authenticating...")
+                time.Sleep(1 * time.Second)
+            }
             return nil
         })
     
     // Add definite task with progress bar
-    downloadProgress := progress.New("Download", 50)
-    sg.AddTask("Download", downloadProgress, func() error {
-        for i := 0; i <= 50; i += 5 {
-            downloadProgress.Update(i, fmt.Sprintf("Downloaded %d files", i))
-            time.Sleep(100 * time.Millisecond)
-        }
-        return nil
-    })
+    sg.AddTask("Download", progress.New("Download", 50), 
+        func(component spinner.TaskComponent) error {
+            // Access progress bar for updates
+            if p, ok := component.(*progress.Progress); ok {
+                for i := 0; i <= 50; i += 5 {
+                    p.Update(i, fmt.Sprintf("Downloaded %d files", i))
+                    time.Sleep(100 * time.Millisecond)
+                }
+            }
+            return nil
+        })
     
     // Run all tasks in a frame
     sg.RunInFrame()
@@ -258,7 +266,7 @@ Both `*Spinner` and `*Progress` implement this interface, enabling mixed usage i
 ### SpinGroup Methods
 
 - `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution using TaskComponent instances (Spinner or Progress)
-- `spinGroup.AddTask(name string, component TaskComponent, taskFunc func() error)` - Add a task with its associated component (Spinner or Progress) and function to the group
+- `spinGroup.AddTask(name string, component TaskComponent, taskFunc func(TaskComponent) error)` - Add a task with its associated component and function that receives the component for dynamic updates
 - `spinGroup.Run() error` - Execute all tasks sequentially, returning first error encountered
 - `spinGroup.RunInFrame() error` - Execute all tasks within a frame for organized display
 - `spinGroup.TaskCount() int` - Get the number of tasks in the group
