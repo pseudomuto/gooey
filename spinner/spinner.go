@@ -306,7 +306,22 @@ func WithShowElapsed(show bool) SpinnerOption {
 	}
 }
 
-// WithSuppressRender controls whether the spinner renders output (useful for testing)
+// WithSuppressRender controls whether the spinner renders output to its writer.
+// This is primarily useful for testing scenarios where you want to verify
+// spinner behavior without producing actual terminal output.
+//
+// Example:
+//
+//	// Create a spinner that won't produce output (for testing)
+//	s := spinner.New("Testing...", spinner.WithSuppressRender(true))
+//	s.Start()
+//	// Spinner logic runs but no output is written
+//	s.UpdateMessage("Updated message") // No visual output
+//	s.Stop() // No completion message shown
+//
+//	// Normal usage (suppress = false, which is the default)
+//	s := spinner.New("Loading...", spinner.WithSuppressRender(false))
+//	s.Start() // Normal animated output
 func WithSuppressRender(suppress bool) SpinnerOption {
 	return func(s *Spinner) {
 		s.suppressRender = suppress

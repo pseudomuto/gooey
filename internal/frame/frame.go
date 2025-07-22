@@ -32,22 +32,30 @@ type FrameAware struct {
 // This utility helps components integrate seamlessly with the frame system,
 // providing automatic frame detection and adaptive rendering behavior.
 //
-// Example:
+// Examples:
 //
-//	// Create a frame-aware component
+//	// Basic usage with automatic frame detection
 //	fa := frame.NewFrameAware(os.Stdout)
 //	if fa.InFrame() {
-//		// Render for frame context
 //		fa.RenderWithStringBuilder(func(sb *strings.Builder) {
-//			sb.WriteString("Frame content")
+//			sb.WriteString("Content rendered within frame")
 //		})
 //	} else {
-//		// Render for standalone context
 //		fa.RenderContent("Standalone content")
 //	}
 //
-// The frame-aware utility automatically detects frame contexts and
-// enables single-line updates for real-time progress components.
+//	// Common usage with spinner/progress components
+//	fa := frame.NewFrameAware(someWriter)
+//	spinner := spinner.New("Loading...", spinner.WithOutput(fa.Output()))
+//	spinner.Start() // Automatically uses ReplaceLine if in frame context
+//
+//	// Manual frame context creation
+//	f := frame.Open("My Frame")
+//	fa := frame.NewFrameAware(f)
+//	// fa.InFrame() will return true
+//
+// The frame-aware utility enables components to work seamlessly in both
+// standalone and frame contexts with optimal rendering strategies.
 func NewFrameAware(output io.Writer) *FrameAware {
 	return &FrameAware{
 		output:      output,
@@ -60,8 +68,17 @@ func NewFrameAware(output io.Writer) *FrameAware {
 // This function determines if the writer supports frame-specific operations
 // like single-line updates and frame-aware rendering.
 func IsFrameWriter(w io.Writer) bool {
-	_, ok := w.(*frame.Frame)
-	return ok
+	// Check if it's directly a frame
+	if _, ok := w.(*frame.Frame); ok {
+		return true
+	}
+
+	// Check if it's a wrapper that reports frame capability
+	if fw, ok := w.(interface{ IsFrameWriter() bool }); ok {
+		return fw.IsFrameWriter()
+	}
+
+	return false
 }
 
 // Output returns the current output writer.

@@ -12,7 +12,24 @@ type SectionLayout struct {
 }
 
 // NewSectionLayout creates a new SectionLayout with the given total width and relative proportions.
-// Example: NewSectionLayout(100, 1, 3, 1) creates a 3-column layout with 20%, 60%, 20% proportions.
+// The weights represent relative proportions and don't need to sum to 1.0 or 100%.
+//
+// Examples:
+//
+//	// 3-column layout with 20%, 60%, 20% proportions
+//	layout := term.NewSectionLayout(100, 1, 3, 1)
+//	widths := layout.SectionWidths() // Returns [20, 60, 20]
+//
+//	// 2-column layout with equal proportions
+//	layout := term.NewSectionLayout(80, 0.5, 0.5)
+//	widths := layout.SectionWidths() // Returns [40, 40]
+//
+//	// Layout with minimum widths to prevent column collapse
+//	layout := term.NewSectionLayout(50, 2, 1, 1)
+//	layout = layout.WithMinWidths(15, 10, 10)
+//	widths := layout.SectionWidths() // Ensures minimums are respected
+//
+// This is commonly used by progress bars for title/bar/message layout.
 func NewSectionLayout(totalWidth int, weights ...float64) SectionLayout {
 	return SectionLayout{
 		TotalWidth: totalWidth,

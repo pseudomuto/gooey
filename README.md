@@ -130,7 +130,7 @@ func main() {
     // Add indefinite task with spinner
     sg.AddTask("Connect", 
         spinner.New("Connecting to server..."), 
-        func(component spinner.TaskComponent) error {
+        func(component spinner.TaskComponent, sg *spinner.SpinGroup) error {
             // Access spinner for dynamic updates
             if s, ok := component.(*spinner.Spinner); ok {
                 time.Sleep(1 * time.Second)
@@ -142,13 +142,32 @@ func main() {
     
     // Add definite task with progress bar
     sg.AddTask("Download", progress.New("Download", 50), 
-        func(component spinner.TaskComponent) error {
+        func(component spinner.TaskComponent, sg *spinner.SpinGroup) error {
             // Access progress bar for updates
             if p, ok := component.(*progress.Progress); ok {
                 for i := 0; i <= 50; i += 5 {
                     p.Update(i, fmt.Sprintf("Downloaded %d files", i))
                     time.Sleep(100 * time.Millisecond)
                 }
+            }
+            return nil
+        })
+    
+    // Task that dynamically discovers and adds subtasks
+    sg.AddTask("Deploy Services", 
+        spinner.New("Discovering services..."), 
+        func(component spinner.TaskComponent, sg *spinner.SpinGroup) error {
+            // Simulate service discovery
+            services := []string{"auth-service", "api-gateway", "user-service"}
+            
+            // Dynamically add subtasks for each discovered service
+            for _, service := range services {
+                sg.AddSubtask(fmt.Sprintf("Deploy %s", service),
+                    spinner.New(fmt.Sprintf("Deploying %s...", service)),
+                    func(c spinner.TaskComponent, _ *spinner.SpinGroup) error {
+                        time.Sleep(500 * time.Millisecond) // Simulate deployment
+                        return nil
+                    })
             }
             return nil
         })
@@ -274,7 +293,8 @@ Both `*Spinner` and `*Progress` implement this interface, enabling mixed usage i
 ### SpinGroup Methods
 
 - `spinner.NewSpinGroup(title string, options ...SpinGroupOption) *SpinGroup` - Create a new spin group for sequential task execution using TaskComponent instances (Spinner or Progress)
-- `spinGroup.AddTask(name string, component TaskComponent, taskFunc func(TaskComponent) error)` - Add a task with its associated component and function that receives the component for dynamic updates
+- `spinGroup.AddTask(name string, component TaskComponent, taskFunc func(TaskComponent, *SpinGroup) error)` - Add a task with its associated component and function that receives both the component for dynamic updates and the SpinGroup for adding subtasks
+- `spinGroup.AddSubtask(name string, component TaskComponent, taskFunc func(TaskComponent, *SpinGroup) error)` - Dynamically add a subtask during execution that will run immediately after the current task completes
 - `spinGroup.Run() error` - Execute all tasks sequentially, returning first error encountered
 - `spinGroup.RunInFrame() error` - Execute all tasks within a frame for organized display
 - `spinGroup.TaskCount() int` - Get the number of tasks in the group
@@ -344,12 +364,14 @@ The SpinGroup examples demonstrate:
 - Sequential task execution using mixed TaskComponent instances (Spinner and Progress)
 - **Mixed Component Usage**: Combine indefinite tasks (Spinners) with definite tasks (Progress bars) in the same workflow
 - **Definite vs Indefinite Tasks**: Use Progress bars for tasks with known steps/completion and Spinners for unpredictable operations
+- **Dynamic Subtask Creation**: Tasks can discover and add subtasks during execution, enabling hierarchical workflows where parent tasks dynamically add child tasks based on runtime conditions
+- **Hierarchical Visual Indentation**: Subtasks display with automatic 2-space indentation per depth level for clear task hierarchy visualization
 - Custom component configurations for each task (colors, renderers, intervals, widths)
 - Error handling with automatic failure detection, visual feedback (red ✗), and early termination
 - Frame integration for organized display with nested frames
 - **Success and Failure States**: Visual indicators show green checkmarks (✓) for success and red crossmarks (✗) for failures
 - Polymorphic API with `Run()` and `RunInFrame()` methods that work with any TaskComponent
-- Thread-safe task addition and execution
+- Thread-safe task addition and execution with concurrent subtask creation
 
 ## Architecture
 
@@ -375,7 +397,7 @@ The SpinGroup examples demonstrate:
 
 ### Prerequisites
 
-- Go 1.21 or later (requires `min()` and `max()` built-in functions)
+- Go 1.22 or later (requires `min()`, `max()` built-in functions and integer range syntax)
 - [Task](https://taskfile.dev/) for build automation
 
 ### Commands

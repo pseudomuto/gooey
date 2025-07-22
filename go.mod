@@ -1,6 +1,6 @@
 module github.com/pseudomuto/gooey
 
-go 1.24.4
+go 1.22
 
 require (
 	github.com/mattn/go-isatty v0.0.20
