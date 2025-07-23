@@ -72,7 +72,7 @@ linters:
   exclusions:
     generated: lax
     paths:
-      - "example/(.+).go$"
+      - "examples/(.+).go$"
     presets:
       - comments
       - common-false-positives
@@ -93,7 +93,8 @@ linters:
         path: (.+)_test.go
       - linters:
           - errcheck
-        path: example/(.+).go
+          - gocognit
+        path: examples/(.+).go
 
 formatters:
   enable:

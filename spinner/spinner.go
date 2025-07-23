@@ -125,6 +125,9 @@ func (s *Spinner) Start() {
 	s.startTime = time.Now()
 	s.mutex.Unlock()
 
+	// Immediately render the first frame to ensure visibility for fast-completing tasks
+	s.render(0)
+
 	go s.animate()
 }
 
